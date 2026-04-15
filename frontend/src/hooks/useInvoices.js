@@ -73,37 +73,40 @@ export const useInvoices = () => {
   // ---------------------------------------------------------------------------
   // handleConfirm — Enviar facturas a base de datos
   // ---------------------------------------------------------------------------
-  const handleConfirm = useCallback(async () => {
+  const handleConfirm = useCallback(async (mode = "valid_only") => {
     setUploading(true);
     setError(null);
 
-    // Filtramos solo las que están en estado procesado
-    const validInvoices = invoices.filter((inv) => inv.status === "procesado");
+    // Seleccionamos las facturas según la elección del usuario
+    const invoicesToSubmit = mode === "all" 
+      ? invoices 
+      : invoices.filter((inv) => inv.status === "procesado");
     
-    if (validInvoices.length === 0) {
-      setError("No hay facturas válidas para confirmar.");
+    if (invoicesToSubmit.length === 0) {
+      setError(mode === "all" ? "No hay facturas para confirmar." : "No hay facturas válidas para confirmar.");
       setUploading(false);
       return;
     }
 
     // Mapeamos el modelo al Payload exacto de la DB requirido por el cliente
-    const payloads = validInvoices.map((inv) => ({
-      cuit_emisor: String(inv.cuit ?? ""),
-      razon_social: inv.razon_social,
-      punto_venta: String(inv.punto_venta ?? ""),
-      numero_comprobante: String(inv.numero ?? ""),
-      fecha_emision: inv.fecha,
-      total: inv.total,
-      cae: inv.cae,
+    const payloads = invoicesToSubmit.map((inv) => ({
+      cuit_emisor: inv.cuit ? String(inv.cuit) : null,
+      razon_social: inv.razon_social ?? null,
+      punto_venta: inv.punto_venta ? String(inv.punto_venta) : null,
+      numero_comprobante: inv.numero ? String(inv.numero) : null,
+      fecha_emision: inv.fecha ?? null,
+      total: inv.total ?? null,
+      cae: inv.cae ?? null,
       // NOTA: Acá pasamos la URL del QR, el backend de python la corrige 
       // y la convierte a afip si era de ARCA.
-      url_qr_afip: inv.qr_link,
+      url_qr_afip: inv.qr_link ?? null,
       cuenta_contable_sugerida: "Muebles y Útiles",
       estado_autorizacion: false,
       estado_pago: false,
     }));
 
     try {
+      const { confirmInvoices } = await import("../services/api");
       const result = await confirmInvoices(payloads);
       
       // Limpiar la tabla porque ya se enviaron con éxito a la nube

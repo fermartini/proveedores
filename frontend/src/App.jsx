@@ -30,6 +30,7 @@ export default function App() {
     error,
     stats,
     handleUpload,
+    handleConfirm,
     clearError,
   } = useInvoices();
 

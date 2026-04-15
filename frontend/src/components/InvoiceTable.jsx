@@ -45,8 +45,10 @@ function SortIcon({ column, sortKey, sortDir }) {
 /**
  * @param {object}   props
  * @param {object[]} props.invoices - Lista de facturas.
+ * @param {Function} props.onConfirm - Callback para confirmar.
+ * @param {boolean}  props.isConfirming - Estado de guardado.
  */
-export default function InvoiceTable({ invoices }) {
+export default function InvoiceTable({ invoices, onConfirm, isConfirming }) {
   const [search, setSearch]     = useState("");
   const [sortKey, setSortKey]   = useState("fecha");
   const [sortDir, setSortDir]   = useState("desc");
@@ -90,6 +92,36 @@ export default function InvoiceTable({ invoices }) {
       setSortDir("asc");
     }
     setPage(1);
+  };
+
+  // ---- Manejo del Botón Confirmar ----
+  const handleConfirmClick = () => {
+    const errorCount = invoices.filter(i => i.status !== "procesado").length;
+    
+    if (errorCount > 0) {
+      const excludeErrors = window.confirm(
+        `Se detectaron ${errorCount} facturas con advertencias o errores.\n\n` +
+        `¿Deseas excluir las facturas erróneas y enviar SOLO las facturas válidas?\n\n` +
+        `- [Aceptar]: Envía solo las procesadas.\n` +
+        `- [Cancelar]: Quiero forzar el envío de todas o abortar.`
+      );
+      
+      if (excludeErrors) {
+        onConfirm("valid_only");
+      } else {
+        const forceAll = window.confirm(
+          `¿Deseas forzar el envío de TODAS las facturas a la Base de Datos, incluso si tienen campos rotos o vacíos?\n\n` +
+          `- [Aceptar]: Sí, enviar todo (incluir errores).\n` +
+          `- [Cancelar]: Abortar y no enviar nada.`
+        );
+        if (forceAll) {
+          onConfirm("all");
+        }
+      }
+    } else {
+      // Todo procesado perfectamente
+      onConfirm("valid_only");
+    }
   };
 
   // ---- Totales footer ----
@@ -221,42 +253,51 @@ export default function InvoiceTable({ invoices }) {
         </table>
       </div>
 
-      {/* ---- Paginación ---- */}
-      {totalPages > 1 && (
-        <div className="px-6 py-3 border-t border-slate-700/50 flex items-center justify-between">
-          <p className="text-xs text-slate-500">
-            Página {page} de {totalPages}
-          </p>
-          <div className="flex items-center gap-1">
+      {/* ---- Paginación y Acciones ---- */}
+      {(totalPages > 1 || invoices.length > 0) && (
+        <div className="px-6 py-4 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-4">
+          
+          {totalPages > 1 ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="btn-ghost px-2 py-1 disabled:opacity-40"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => Math.abs(p - page) <= 2)
+                .map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+                      p === page
+                        ? "bg-brand-600 text-white"
+                        : "text-slate-400 hover:bg-slate-700 hover:text-white"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="btn-ghost px-2 py-1 disabled:opacity-40"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          ) : <div />}
+
+          <div className="flex justify-end ml-auto">
             <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="btn-ghost px-2 py-1 disabled:opacity-40"
+              onClick={handleConfirmClick}
+              disabled={isConfirming || invoices.length === 0}
+              className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-brand-500/20"
             >
-              <ChevronLeft size={14} />
-            </button>
-            {/* Botones de página */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => Math.abs(p - page) <= 2)
-              .map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                    p === page
-                      ? "bg-brand-600 text-white"
-                      : "text-slate-400 hover:bg-slate-700 hover:text-white"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="btn-ghost px-2 py-1 disabled:opacity-40"
-            >
-              <ChevronRight size={14} />
+              {isConfirming ? "Guardando en DB..." : "Confirmar a Base de Datos"}
             </button>
           </div>
         </div>

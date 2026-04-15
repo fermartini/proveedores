@@ -1,0 +1,12 @@
+backend/serviceAccountKey.json
+.env
+__pycache__/
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vscode/
+.idea/
+.DS_Store
+logs/
+*.log
