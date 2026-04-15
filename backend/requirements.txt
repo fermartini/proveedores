@@ -1,0 +1,10 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+firebase-admin==6.5.0
+python-multipart==0.0.9
+pydantic==2.7.1
+python-dotenv==1.0.1
+pdfplumber==0.11.1
+PyMuPDF==1.24.5
+pyzbar==0.1.9
+Pillow==10.3.0
