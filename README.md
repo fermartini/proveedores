@@ -1,9 +1,10 @@
 ---
-title: Api Facturas Mas
-emoji: 🌖
-colorFrom: pink
-colorTo: purple
+title: API Facturas MAS
+emoji: 🧾
+colorFrom: blue
+colorTo: indigo
 sdk: docker
+app_file: app.py
 pinned: false
 ---
 
