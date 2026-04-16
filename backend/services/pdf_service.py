@@ -15,9 +15,10 @@ Requiere GEMINI_API_KEY en el .env para activar el fallback de IA.
 import logging
 import base64
 import json
+import time
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from models.invoice import InvoiceResult
 from services import qr_service, parser_service, llm_service
@@ -101,7 +102,7 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
     if is_image:
         # Caso Imagen: Una sola página
         img = qr_service.render_first_page(file_bytes, is_pdf=False)
-        res = _process_single_page(filename, img, None)
+        res = _process_single_page(filename, img, None, seen_qrs, seen_invoices)
         if res:
             results.append(res)
     else:
@@ -115,7 +116,7 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
             page_img = images[i] if i < len(images) else None
             page_text = texts[i] if i < len(texts) else None
             
-            res = _process_single_page(filename, page_img, page_text)
+            res = _process_single_page(filename, page_img, page_text, seen_qrs, seen_invoices)
             
             if res:
                 # Asignar ID único basado en archivo y página
@@ -153,7 +154,13 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
     return results
 
 
-def _process_single_page(filename: str, page_image, page_text: Optional[str]) -> Optional[InvoiceResult]:
+def _process_single_page(
+    filename: str, 
+    page_image, 
+    page_text: Optional[str],
+    seen_qrs: Set[str],
+    seen_invoices: Set[tuple]
+) -> Optional[InvoiceResult]:
     """
     Nucleo de procesamiento para una sola página (Imagen + Texto opcional).
     Devuelve un InvoiceResult.
@@ -185,20 +192,44 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
         logger.error(f"[PDF Service] Error al extraer QR: {exc}")
         qr_url = qr_service.QR_NO_SE_PUEDE_LEER
 
-    # 3. Fallback LLM (Gemini) si el QR falla o es incompleto
+    # 3. Fallback LLM (Gemini) si el QR falla o es insuficiente
     qr_suficiente = bool(qr_data) and _qr_data_es_completo(qr_data)
-    if not qr_suficiente and page_image:
-        logger.info("[PDF Service] QR insuficiente → activando fallback Gemini...")
-        llm_raw = llm_service.extraer_datos_con_llm(page_image)
-        if llm_raw:
-            llm_fields = llm_service.normalizar_datos_llm(llm_raw)
-            used_llm = True
-            for key, value in llm_fields.items():
-                if key == "qr_url_from_llm":
-                    if not (qr_url and qr_url.lower().startswith("http")):
-                        qr_url = qr_service.fix_arca_domain(value)
-                elif key not in parsed_fields or parsed_fields.get(key) is None:
-                    parsed_fields[key] = value
+    
+    # OPTIMIZACIÓN: Si ya tenemos datos suficientes por OCR (pdfplumber), evitamos llamar a Gemini
+    # para no agotar la cuota de la API (15 RPM en free tier).
+    ocr_razon_social = parsed_fields.get("razon_social")
+    ocr_numero = parsed_fields.get("numero")
+    ocr_cuit = parsed_fields.get("cuit")
+    ocr_suficiente = bool(ocr_razon_social and str(ocr_razon_social).strip()) and (ocr_numero is not None)
+    
+    # Chequeo de duplicado preventivo antes de Gemini
+    is_already_seen = False
+    if qr_url and qr_url.lower().startswith("http") and qr_url in seen_qrs:
+        is_already_seen = True
+    elif ocr_cuit and ocr_numero and (str(ocr_cuit), ocr_numero) in seen_invoices:
+        is_already_seen = True
+
+    if not qr_suficiente and not ocr_suficiente and not is_already_seen and page_image:
+        # Solo llamar a Gemini si el texto es muy corto o falta info clave Y no se vio antes
+        longitud_texto = len(page_text) if page_text else 0
+        if longitud_texto < 100 or not ocr_suficiente:
+            logger.info(f"[PDF Service] QR/OCR insuficiente ({longitud_texto} chars) → activando fallback Gemini...")
+            
+            # Throttling preventivo: esperar un poco si estamos en un PDF multi-página para no saturar
+            time.sleep(1.5)
+            
+            llm_raw = llm_service.extraer_datos_con_llm(page_image)
+            if llm_raw:
+                llm_fields = llm_service.normalizar_datos_llm(llm_raw)
+                used_llm = True
+                for key, value in llm_fields.items():
+                    if key == "qr_url_from_llm":
+                        if not (qr_url and qr_url.lower().startswith("http")):
+                            qr_url = qr_service.fix_arca_domain(value)
+                    elif key not in parsed_fields or parsed_fields.get(key) is None:
+                        parsed_fields[key] = value
+        else:
+            logger.info(f"[PDF Service] OCR suficiente ({longitud_texto} chars), omitiendo Gemini para ahorrar cuota.")
 
     # 4. Fusionar datos de QR sobre texto/IA
     if qr_data:
