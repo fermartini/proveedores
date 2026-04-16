@@ -226,7 +226,10 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
     
     datos_minimos_ok = bool(razon_social and str(razon_social).strip()) and (numero is not None)
 
-    if not datos_minimos_ok:
+    if "B" in str(tipo_final).upper():
+        status = "tipo_invalido"
+        error_detail = "Las facturas tipo B no están permitidas."
+    elif not datos_minimos_ok:
         if qr_url and qr_url.lower().startswith("http"):
             status = "procesado" # Si tiene QR pero no pudo leer texto/IA, se marca como procesado igual (el confirm fallará luego si faltan datos)
         else:
