@@ -113,7 +113,8 @@ export const useInvoices = () => {
       setInvoices([]);
       alert(`¡Éxito! Se subieron ${result.saved_count} facturas a la Base de Datos.`);
     } catch (err) {
-      setError("Hubo un error guardando las facturas en la base de datos.");
+      const detail = err?.response?.data?.detail || err?.message || "Hubo un error guardando las facturas en la base de datos.";
+      setError(detail);
       console.error("[useInvoices] Error en confirm:", err);
     } finally {
       setUploading(false);

@@ -187,6 +187,10 @@ async def confirm_invoices(payloads: List[InvoiceDBPayload]):
             logger.error(f"[Confirm] ✗ Error guardando factura: {e}")
             errors.append(str(e))
 
+    if saved_count == 0 and len(payloads) > 0:
+        error_msg = "; ".join(errors) if errors else "Firestore no disponible. Verificá el secreto FIREBASE_SERVICE_ACCOUNT_JSON en Hugging Face."
+        raise HTTPException(status_code=500, detail=f"No se guardó ninguna factura. Error: {error_msg}")
+
     return {
         "success": True,
         "saved_count": saved_count,
