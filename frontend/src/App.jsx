@@ -21,6 +21,7 @@ import StatsCard   from "./components/StatsCard";
 import DropZone    from "./components/DropZone";
 import InvoiceTable from "./components/InvoiceTable";
 import { useInvoices } from "./hooks/useInvoices";
+import { BASE_URL } from "./services/api";
 
 export default function App() {
   const {
@@ -160,7 +161,7 @@ export default function App() {
           <p className="text-xs text-slate-700">
             FacturaScan AFIP/ARCA · Motor de extracción v1.0 ·{" "}
             <a
-              href="http://localhost:8000/docs"
+              href={`${BASE_URL}/docs`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-slate-600 hover:text-brand-400 transition-colors"

@@ -12,7 +12,7 @@
 import axios from "axios";
 
 // URL base del backend — configurable via .env (VITE_API_URL)
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const BASE_URL = import.meta.env.VITE_API_URL || "https://khalldragon-api-facturas-mas.hf.space";
 
 // Instancia de axios con config base
 const apiClient = axios.create({
