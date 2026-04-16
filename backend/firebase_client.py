@@ -14,6 +14,7 @@ Ver: https://firebase.google.com/docs/admin/setup
 """
 
 import os
+import json
 import logging
 from datetime import datetime
 from typing import Optional
@@ -45,17 +46,30 @@ def _init_firebase() -> Optional[firestore.Client]:
 
     credentials_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json")
 
-    if not os.path.exists(credentials_path):
-        logger.error(
-            f"[Firebase] Archivo de credenciales no encontrado: {credentials_path}\n"
-            "Por favor, descarga el serviceAccountKey.json desde:\n"
-            "Firebase Console → Proyecto → Configuración → Cuentas de servicio"
-        )
-        return None
-
     try:
         if not firebase_admin._apps:
-            cred = credentials.Certificate(credentials_path)
+            # 1. Intentar cargar desde variable de entorno (JSON string) - Recomendado para Prod/HF
+            service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+            
+            if service_account_json:
+                try:
+                    cred_dict = json.loads(service_account_json)
+                    cred = credentials.Certificate(cred_dict)
+                    logger.info("[Firebase] Usando credenciales desde variable FIREBASE_SERVICE_ACCOUNT_JSON.")
+                except Exception as json_err:
+                    logger.error(f"[Firebase] Error parseando FIREBASE_SERVICE_ACCOUNT_JSON: {json_err}")
+                    return None
+            else:
+                # 2. Fallback: Intentar cargar desde archivo físico (comportamiento anterior)
+                if not os.path.exists(credentials_path):
+                    logger.error(
+                        f"[Firebase] Archivo de credenciales no encontrado: {credentials_path}\n"
+                        "Configura FIREBASE_SERVICE_ACCOUNT_JSON o sube el archivo."
+                    )
+                    return None
+                cred = credentials.Certificate(credentials_path)
+                logger.info(f"[Firebase] Usando credenciales desde archivo: {credentials_path}")
+
             firebase_admin.initialize_app(cred)
             logger.info("[Firebase] SDK inicializado correctamente.")
 
