@@ -32,7 +32,7 @@ TIPO_COMPROBANTE_MAP = {
     11: "C", 12: "ND C", 13: "NC C"
 }
 
-CUIT_JC = "30527990773"
+
 
 
 
@@ -224,29 +224,16 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
     cuit_receptor = parsed_fields.get("cuit_receptor")
     tipo_final = parsed_fields.get("tipo_factura", "B")
     
-    # Validar receptor (Jockey Club)
-    receptor_ok = True
-    if cuit_receptor:
-        # Normalizar y comparar los últimos 11 dígitos por si viene con prefijo de tipo doc
-        clean_receptor = str(cuit_receptor).replace("-", "").strip()
-        if clean_receptor and clean_receptor != CUIT_JC:
-            receptor_ok = False
-
     datos_minimos_ok = bool(razon_social and str(razon_social).strip()) and (numero is not None)
 
-    if not receptor_ok:
-        status = "receptor_invalido"
-        error_detail = f"⚠️ NO ESTÁ A NOMBRE DEL JC - {filename}"
-    elif tipo_final == "B":
-        status = "tipo_invalido"
-        error_detail = "Las facturas tipo B no están permitidas."
-    elif not datos_minimos_ok:
+    if not datos_minimos_ok:
         if qr_url and qr_url.lower().startswith("http"):
             status = "procesado" # Si tiene QR pero no pudo leer texto/IA, se marca como procesado igual (el confirm fallará luego si faltan datos)
         else:
             status = "sin_qr" if not used_llm else "error"
             if status == "error":
                 error_detail = "No se pudieron extraer datos mínimos (Razón Social/Número)."
+
 
     # 6. Reglas de cálculo y Conversión USD
     es_credito = "NC" in str(tipo_final).upper()
