@@ -156,6 +156,7 @@ const formatNumero = (pv, num) => {
  */
 export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
   const [localInvoice, setLocalInvoice] = useState(invoice);
+  const [showRetInput, setShowRetInput] = useState(false);
   const {
     filename, cuit, razon_social, tipo_factura, punto_venta, numero,
     fecha, importe_neto, iva, total, cae, qr_link, cuenta_contable,
@@ -177,7 +178,7 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
     const updatedFields = {
       importe_neto: Number(newNeto.toFixed(2)),
       iva: Number(newIva.toFixed(2)),
-      otros_tributos: valOtros
+      otros_tributos: Number(valOtros.toFixed(2))
     };
 
     setLocalInvoice(prev => ({ ...prev, ...updatedFields }));
@@ -297,13 +298,6 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
         </div>
       </td>
 
-      {/* Conceptos (Descripción) */}
-      <td className="px-4 py-3 min-w-[150px] max-w-[250px]">
-        <p className="text-xs text-slate-400 truncate group-hover:whitespace-normal transition-all duration-300" title={invoice.descripcion}>
-          {invoice.descripcion ?? <span className="text-slate-700 italic">Sin descripción</span>}
-        </p>
-      </td>
-
       {isInvalidReceptor ? (
         // MODO ULTRA ROJO: Aviso gigante ocultando el resto de las celdas de datos (excepto eliminar)
         <td colSpan={6} className="px-4 py-3 text-center">
@@ -324,6 +318,13 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
             <ClickToCopyText value={fecha}>
               <span className="hover:text-brand-400 transition-colors">{fecha ?? "—"}</span>
             </ClickToCopyText>
+          </td>
+
+          {/* NETO (Calculado) */}
+          <td className="px-4 py-3 whitespace-nowrap text-right">
+            <span className="text-xs font-mono text-white font-medium">
+              {formatARS(importe_neto)}
+            </span>
           </td>
 
           {/* IVA con Selector Vertical */}
@@ -354,20 +355,32 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
             </div>
           </td>
 
-          {/* Otros / Ret (Editable + Botón Sugerido) */}
+          {/* Otros / Ret (Botón + Verde) */}
           <td className="px-4 py-3 whitespace-nowrap text-right">
             <div className="flex flex-col items-end gap-1">
-              <div className="flex items-center gap-1 bg-slate-900/50 border border-slate-700 rounded px-1.5 py-0.5 focus-within:border-brand-500 transition-colors">
-                <span className="text-brand-500 text-[10px] font-bold">+</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={otros_tributos || ""}
-                  onChange={(e) => handleRecalculate(e.target.value)}
-                  className="w-16 bg-transparent border-none text-right text-xs font-mono text-brand-300 outline-none p-0 appearance-none"
-                />
-              </div>
+              {!showRetInput && (!otros_tributos || otros_tributos === 0) ? (
+                <button
+                  onClick={() => setShowRetInput(true)}
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-110"
+                  title="Agregar Retenciones / Percepciones"
+                >
+                  <span className="text-lg font-bold">+</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1 bg-slate-900/50 border border-slate-700 rounded px-1.5 py-0.5 focus-within:border-brand-500 transition-colors">
+                  <span className="text-brand-500 text-[10px] font-bold">+</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    autoFocus
+                    placeholder="0.00"
+                    value={otros_tributos || ""}
+                    onChange={(e) => handleRecalculate(e.target.value)}
+                    onBlur={() => { if(!otros_tributos) setShowRetInput(false); }}
+                    className="w-16 bg-transparent border-none text-right text-xs font-mono text-brand-300 outline-none p-0"
+                  />
+                </div>
+              )}
               <span className="text-[8px] text-slate-600 uppercase font-bold tracking-tighter">Ret | Perc</span>
             </div>
           </td>
