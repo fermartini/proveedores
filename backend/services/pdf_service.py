@@ -31,6 +31,10 @@ TIPO_COMPROBANTE_MAP = {
     6: "B", 7: "ND B", 8: "NC B", 
     11: "C", 12: "ND C", 13: "NC C"
 }
+ 
+CUIT_JC = "30527990773"
+ 
+
 
 
 
@@ -224,9 +228,19 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
     cuit_receptor = parsed_fields.get("cuit_receptor")
     tipo_final = parsed_fields.get("tipo_factura", "B")
     
+    # Validar receptor (Jockey Club) — SOLO si los datos vienen del QR para evitar falsos positivos
+    receptor_ok = True
+    if qr_data and qr_data.get("nroDocRec"):
+        clean_receptor = str(qr_data.get("nroDocRec")).strip()
+        if clean_receptor and clean_receptor != CUIT_JC:
+            receptor_ok = False
+    
     datos_minimos_ok = bool(razon_social and str(razon_social).strip()) and (numero is not None)
 
-    if "B" in str(tipo_final).upper():
+    if not receptor_ok:
+        status = "receptor_invalido"
+        error_detail = f"⚠️ NO ESTÁ A NOMBRE DEL JC - {filename}"
+    elif "B" in str(tipo_final).upper():
         status = "tipo_invalido"
         error_detail = "Las facturas tipo B no están permitidas."
     elif not datos_minimos_ok:
