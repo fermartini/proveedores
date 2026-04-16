@@ -84,9 +84,9 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
     is_image = filename.lower().endswith((".jpg", ".jpeg", ".png"))
     results: List[InvoiceResult] = []
     
-    # Ducto de deduplicación interna: solo saltear si es idéntica a la ANTERIOR (consecutivos)
-    last_qr = None
-    last_key = None
+    # Ducto de deduplicación interna por archivo: evita Original/Duplicado/Triplicado
+    seen_qrs = set()
+    seen_invoices = set()
 
     if is_image:
         # Caso Imagen: Una sola página
@@ -110,25 +110,30 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
             if res and res.status != "error":
                 is_duplicate = False
                 
-                current_qr = res.qr_link if (res.qr_link and res.qr_link.lower().startswith("http")) else None
-                current_key = (str(res.cuit), res.numero) if (res.cuit and res.numero) else None
+                qr_link = res.qr_link if (res.qr_link and res.qr_link.lower().startswith("http")) else None
+                inv_key = (str(res.cuit), res.numero) if (res.cuit and res.numero) else None
 
-                # Comparar solo con el anterior (Deduplicación de hojas consecutivas)
-                if current_qr and current_qr == last_qr:
-                    is_duplicate = True
-                elif current_key and current_key == last_key:
-                    is_duplicate = True
+                # 1. Chequeo por QR
+                if qr_link:
+                    if qr_link in seen_qrs:
+                        is_duplicate = True
+                    else:
+                        seen_qrs.add(qr_link)
                 
-                # Actualizar punteros para la siguiente vuelta
-                last_qr = current_qr
-                last_key = current_key
+                # 2. Chequeo por CUIT + Número (si no se duplicó por QR)
+                if not is_duplicate and inv_key:
+                    if inv_key in seen_invoices:
+                        is_duplicate = True
+                    else:
+                        seen_invoices.add(inv_key)
 
                 if is_duplicate:
-                    logger.info(f"[PDF Service] Página {i+1} es igual a la anterior en {filename}, ignorando.")
+                    logger.info(f"[PDF Service] Página {i+1} duplicada (Original/Duplicado/etc) en {filename}, ignorando.")
                     continue
             
             if res:
                 results.append(res)
+
 
 
     return results
