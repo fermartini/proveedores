@@ -222,6 +222,7 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
     razon_social = parsed_fields.get("razon_social")
     numero = parsed_fields.get("numero")
     cuit_receptor = parsed_fields.get("cuit_receptor")
+    tipo_final = parsed_fields.get("tipo_factura", "B")
     
     # Validar receptor (Jockey Club)
     receptor_ok = True
@@ -240,8 +241,6 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
         status = "tipo_invalido"
         error_detail = "Las facturas tipo B no están permitidas."
     elif not datos_minimos_ok:
-
-
         if qr_url and qr_url.lower().startswith("http"):
             status = "procesado" # Si tiene QR pero no pudo leer texto/IA, se marca como procesado igual (el confirm fallará luego si faltan datos)
         else:
@@ -250,8 +249,8 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
                 error_detail = "No se pudieron extraer datos mínimos (Razón Social/Número)."
 
     # 6. Reglas de cálculo y Conversión USD
-    tipo_final = parsed_fields.get("tipo_factura", "B")
     es_credito = "NC" in str(tipo_final).upper()
+
     moneda = parsed_fields.get("moneda", "ARS")
     cotizacion = parsed_fields.get("cotizacion", 1.0)
     
