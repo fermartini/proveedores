@@ -10,8 +10,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   RefreshCw, Search, DollarSign, CheckCircle2,
   Clock, TrendingUp, ExternalLink, ChevronUp, ChevronDown,
-  ChevronsUpDown, FileX, Filter,
+  ChevronsUpDown, FileX, Filter, Building2
 } from "lucide-react";
+
 import { useDashboard } from "../hooks/useDashboard";
 
 // ---------------------------------------------------------------------------
@@ -80,6 +81,17 @@ function ToggleBtn({ value, onLabel, offLabel, onClick, disabled, onColor, offCo
 // ---------------------------------------------------------------------------
 function DashboardRow({ invoice, onToggle, isUpdating }) {
   const isDisabled = isUpdating;
+  
+  const isInvalidReceptor = invoice.status === "receptor_invalido";
+  
+  const rowClass = isInvalidReceptor
+    ? "bg-red-600/20 hover:bg-red-600/30"
+    : (invoice.es_credito 
+        ? "bg-violet-500/10 hover:bg-violet-500/20" 
+        : (invoice.moneda === "USD" ? "bg-blue-500/10 hover:bg-blue-500/20" : "hover:bg-slate-800/40")
+      );
+
+
 
   return (
     <motion.tr
@@ -87,59 +99,86 @@ function DashboardRow({ invoice, onToggle, isUpdating }) {
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 8 }}
-      className="border-b border-slate-700/30 hover:bg-slate-800/40 transition-colors group"
+      className={`border-b border-slate-700/30 transition-colors group ${rowClass}`}
     >
       {/* Proveedor */}
       <td className="px-4 py-3">
-        <div>
-          <p className="text-sm font-medium text-white truncate max-w-[200px]">
-            {invoice.razon_social ?? <span className="text-slate-500 italic">Sin nombre</span>}
-          </p>
-          <p className="text-xs text-slate-500 font-mono">{invoice.cuit_emisor ?? "—"}</p>
+        <div className="flex items-center gap-3">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+            invoice.es_credito ? "bg-red-500/20" : (invoice.moneda === "USD" ? "bg-blue-500/20" : "bg-slate-700/60")
+          }`}>
+            <Building2 size={13} className={invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-slate-400")} />
+          </div>
+          <div className="min-w-0">
+            <p className={`text-sm font-medium truncate max-w-[180px] ${
+              invoice.es_credito ? "text-red-300" : (invoice.moneda === "USD" ? "text-blue-300" : "text-white")
+            }`}>
+              {invoice.razon_social ?? <span className="text-slate-500 italic">Sin nombre</span>}
+            </p>
+            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{invoice.cuit_emisor ?? "—"}</p>
+          </div>
         </div>
       </td>
 
+
       {/* Comprobante */}
       <td className="px-4 py-3">
-        <div>
-          <p className="text-xs text-slate-400 font-mono">
+        <div className="flex items-center gap-1.5">
+          <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+            invoice.es_credito ? "bg-red-500/20 text-red-300" : "bg-slate-700/60 text-slate-300"
+          }`}>
+            {invoice.tipo_factura || "FAC"}
+          </span>
+          <p className="text-[11px] text-slate-400 font-mono">
             {invoice.punto_venta ? `${String(invoice.punto_venta).padStart(4, "0")}-` : ""}
             {invoice.numero_comprobante
               ? String(invoice.numero_comprobante).padStart(8, "0")
-              : <span className="text-slate-600">—</span>
+              : <span>—</span>
             }
           </p>
-          <p className="text-xs text-slate-500 mt-0.5">{invoice.fecha_emision ?? "—"}</p>
         </div>
+      </td>
+
+      {/* Fecha */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <span className="text-xs text-slate-500">{invoice.fecha_emision ?? "—"}</span>
+      </td>
+
+      {/* IVA */}
+      <td className="px-4 py-3 text-right">
+        <span className="text-xs text-slate-500 font-mono">
+          {invoice.iva != null ? formatARS(invoice.iva) : "—"}
+        </span>
+      </td>
+
+      {/* Otros */}
+      <td className="px-4 py-3 text-right">
+        <span className="text-xs text-slate-500 font-mono">
+          {invoice.otros_tributos != null ? formatARS(invoice.otros_tributos) : "—"}
+        </span>
       </td>
 
       {/* Importe */}
       <td className="px-4 py-3 text-right">
-        <span className="text-sm font-bold text-white font-mono">
-          {invoice.total != null ? formatARS(invoice.total) : <span className="text-slate-600">—</span>}
-        </span>
+        <div className="flex flex-col items-end">
+          <span className={`text-sm font-bold font-mono ${
+             invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-white")
+          }`}>
+            {invoice.total != null ? formatARS(invoice.total) : <span className="text-slate-600">—</span>}
+          </span>
+          {invoice.moneda === "USD" && (
+            <span className="text-[9px] text-blue-500/80 font-medium">USD Conv.</span>
+          )}
+        </div>
       </td>
 
-      {/* CAE */}
-      <td className="px-4 py-3 hidden lg:table-cell">
-        <span className="text-xs text-slate-500 font-mono">
-          {invoice.cae ? invoice.cae.slice(0, 8) + "..." : "—"}
-        </span>
-      </td>
-
-      {/* Cuenta contable */}
-      <td className="px-4 py-3 hidden xl:table-cell">
-        <span className="text-xs text-slate-400 truncate max-w-[140px] block">
-          {invoice.cuenta_contable_sugerida ?? "—"}
-        </span>
-      </td>
 
       {/* Estado Autorizada */}
       <td className="px-4 py-3 text-center">
         <ToggleBtn
           value={invoice.autorizada}
           onLabel="Autorizada"
-          offLabel="No autorizada"
+          offLabel="Pendiente"
           onClick={() => onToggle(invoice.id, "autorizada", invoice.autorizada)}
           disabled={isDisabled}
           onColor="bg-violet-500/20 text-violet-300 border border-violet-500/40"
@@ -180,6 +219,7 @@ function DashboardRow({ invoice, onToggle, isUpdating }) {
   );
 }
 
+
 // ---------------------------------------------------------------------------
 // Sort Icon
 // ---------------------------------------------------------------------------
@@ -196,13 +236,15 @@ function SortIcon({ col, sortKey, sortDir }) {
 const COLS = [
   { key: "razon_social",       label: "Proveedor",       sortable: true,  align: "left"   },
   { key: "numero_comprobante", label: "Comprobante",     sortable: false, align: "left"   },
+  { key: "fecha_emision",      label: "Fecha",           sortable: true,  align: "left"   },
+  { key: "iva",                label: "IVA",             sortable: true,  align: "right"  },
+  { key: "otros_tributos",     label: "Otros / Ret",     sortable: true,  align: "right"  },
   { key: "total",              label: "Importe",         sortable: true,  align: "right"  },
-  { key: "cae",                label: "CAE",             sortable: false, align: "left",  hidden: "lg" },
-  { key: "cuenta",             label: "Cuenta",          sortable: false, align: "left",  hidden: "xl" },
   { key: "autorizada",         label: "Autorización",    sortable: true,  align: "center" },
   { key: "pagada",             label: "Pago",            sortable: true,  align: "center" },
   { key: "qr",                 label: "Verificar",       sortable: false, align: "center" },
 ];
+
 
 const FILTERS = [
   { id: "all",        label: "Todas"         },

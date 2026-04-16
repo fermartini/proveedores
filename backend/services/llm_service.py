@@ -35,18 +35,26 @@ sin bloques de código, sin texto antes ni después del JSON:
   "punto_venta": "número entero o null",
   "numero_comprobante": "número entero o null",
   "fecha_emision": "string en formato DD/MM/AAAA o null",
+  "importe_neto": "número decimal o null",
+  "iva": "número decimal o null",
+  "otros_tributos": "número decimal o null",
   "total": "número decimal o null",
+  "moneda": "ARS o USD",
+  "cotizacion": "número decimal o null (Tipo de cambio si es USD)",
   "cae": "string o null",
   "tipo_factura": "A, B o C o null",
+  "cuit_receptor": "string o null",
   "url_qr_afip": "URL completa si la ves o null"
 }
 
 Reglas:
-- El CUIT es un número de 11 dígitos que aparece en el encabezado de la factura.
+- El CUIT Emisor es un número de 11 dígitos que aparece en el encabezado de la factura.
+- El CUIT Receptor es a nombre de quien sale la factura (receptor).
 - El CAE es un número de 14 dígitos que aparece generalmente al pie de la factura.
-- El total es el importe TOTAL final de la factura (no el neto gravado, sino el total final).
-- Si un campo no es visible o ilegible, devolvé null para ese campo.
+- El total es el importe TOTAL final de la factura.
+- Si moneda es USD, buscá el "Tipo de Cambio" o "Cotización" para completar el campo cotizacion.
 - No inventes datos. Solo extraé lo que esté claramente visible en la imagen.
+
 """
 
 
@@ -188,11 +196,37 @@ def normalizar_datos_llm(llm_data: dict) -> dict:
     if llm_data.get("fecha_emision"):
         normalized["fecha"] = str(llm_data["fecha_emision"]).strip()
 
+    if llm_data.get("importe_neto") is not None:
+        try:
+            normalized["importe_neto"] = float(llm_data["importe_neto"])
+        except: pass
+
+    if llm_data.get("iva") is not None:
+        try:
+            normalized["iva"] = float(llm_data["iva"])
+        except: pass
+
+    if llm_data.get("otros_tributos") is not None:
+        try:
+            normalized["otros_tributos"] = float(llm_data["otros_tributos"])
+        except: pass
+
     if llm_data.get("total") is not None:
         try:
             normalized["total"] = float(llm_data["total"])
         except (ValueError, TypeError):
             pass
+
+    if llm_data.get("moneda"):
+        mon = str(llm_data["moneda"]).strip().upper()
+        normalized["moneda"] = "USD" if "USD" in mon or "DOL" in mon else "ARS"
+
+    if llm_data.get("cotizacion") is not None:
+        try:
+            val = float(llm_data["cotizacion"])
+            if val > 0:
+                normalized["cotizacion"] = val
+        except: pass
 
     if llm_data.get("cae"):
         normalized["cae"] = str(llm_data["cae"]).strip()
@@ -207,4 +241,9 @@ def normalizar_datos_llm(llm_data: dict) -> dict:
         if url.lower().startswith("http"):
             normalized["qr_url_from_llm"] = url
 
+    if llm_data.get("cuit_receptor"):
+        normalized["cuit_receptor"] = str(llm_data["cuit_receptor"]).replace("-", "").replace(".", "").strip()
+
     return normalized
+
+

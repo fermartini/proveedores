@@ -179,13 +179,22 @@ export default function InvoiceRow({ invoice, index, onRemove }) {
 
   // Para filas rechazadas o con error fatal, mostrar el detalle en la celda del proveedor
   const isErrorRow = status === "tipo_invalido" || status === "error";
+  const isInvalidReceptor = status === "receptor_invalido";
+  
+  const rowClass = isInvalidReceptor
+    ? "bg-red-600/90 hover:bg-red-700 transition-all duration-300"
+    : (invoice.es_credito 
+        ? "bg-violet-500/10 hover:bg-violet-500/20" 
+        : (invoice.moneda === "USD" ? "bg-blue-500/10 hover:bg-blue-500/20" : "hover:bg-slate-800/30")
+      );
+
 
   return (
     <motion.tr
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.04 }}
-      className="border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors duration-150 group"
+      className={`border-b border-slate-700/50 transition-colors duration-150 group ${rowClass}`}
     >
       {/* Estado */}
       <td className="px-4 py-3 whitespace-nowrap">
@@ -196,26 +205,30 @@ export default function InvoiceRow({ invoice, index, onRemove }) {
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5">
           <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            isErrorRow ? "bg-orange-500/10" : "bg-slate-700/60"
+            isInvalidReceptor ? "bg-white/20" : (invoice.es_credito ? "bg-violet-500/20" : (invoice.moneda === "USD" ? "bg-blue-500/20" : "bg-slate-700/60"))
           }`}>
-            <Building2 size={13} className={isErrorRow ? "text-orange-400" : "text-slate-400"} />
+            <Building2 size={13} className={isInvalidReceptor ? "text-white" : (invoice.es_credito ? "text-violet-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-slate-400"))} />
           </div>
           <div className="min-w-0">
-            {isErrorRow ? (
-              // Fila rechazada: mostrar el archivo y el motivo
+            {isErrorRow || isInvalidReceptor ? (
+              // Fila rechazada o receptor inválido: mostrar el archivo y el motivo
               <>
-                <p className="text-xs font-mono text-slate-500 truncate max-w-[200px]">
+                <p className={`text-xs font-mono truncate max-w-[200px] ${isInvalidReceptor ? "text-white/80" : "text-slate-500"}`}>
                   {filename}
                 </p>
-                <p className="text-[11px] text-orange-400 mt-0.5">
-                  {error_detail ?? "Tipo de factura no admitido"}
-                </p>
+                <ClickToCopyText value={razon_social}>
+                  <p className={`text-sm font-bold truncate max-w-[180px] hover:underline transition-colors ${isInvalidReceptor ? "text-white" : "text-red-400"}`}>
+                    {razon_social ?? "Proveedor no identificado"}
+                  </p>
+                </ClickToCopyText>
               </>
             ) : (
               // Fila normal
               <>
                 <ClickToCopyText value={razon_social}>
-                  <p className="text-sm font-medium text-slate-200 truncate max-w-[180px] hover:text-brand-400 hover:underline transition-colors decoration-brand-400/50 underline-offset-2">
+                  <p className={`text-sm font-medium truncate max-w-[180px] hover:text-brand-400 hover:underline transition-colors decoration-brand-400/50 underline-offset-2 ${
+                    invoice.es_credito ? "text-violet-300" : (invoice.moneda === "USD" ? "text-blue-300" : "text-slate-200")
+                  }`}>
                     {razon_social ?? <span className="text-slate-600 hover:no-underline">No extraído</span>}
                   </p>
                 </ClickToCopyText>
@@ -234,100 +247,141 @@ export default function InvoiceRow({ invoice, index, onRemove }) {
       <td className="px-4 py-3 whitespace-nowrap">
         <div className="flex items-center gap-2">
           {tipo_factura && (
-            <span className="px-2 py-0.5 rounded-md bg-slate-700/60 text-xs font-bold text-slate-300">
+            <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${
+              isInvalidReceptor ? "bg-white/20 text-white" : (invoice.es_credito ? "bg-violet-500/20 text-violet-300" : "bg-slate-700/60 text-slate-300")
+            }`}>
               {tipo_factura}
             </span>
           )}
-          <div className="text-xs font-mono text-slate-400 flex items-center">
+
+          <div className={`text-xs font-mono flex items-center ${isInvalidReceptor ? "text-white/90" : "text-slate-400"}`}>
             <ClickToCopyText value={punto_venta ? String(punto_venta).padStart(4, "0") : ""}>
-              <span className="hover:text-brand-400 transition-colors">{punto_venta ? String(punto_venta).padStart(4, "0") : "—"}</span>
+              <span className="hover:text-brand-400 transition-colors font-bold">{punto_venta ? String(punto_venta).padStart(4, "0") : "—"}</span>
             </ClickToCopyText>
             <span className="mx-0.5 opacity-50">-</span>
             <ClickToCopyText value={numero ? String(numero).padStart(8, "0") : ""}>
-              <span className="hover:text-brand-400 transition-colors">{numero ? String(numero).padStart(8, "0") : "—"}</span>
+              <span className="hover:text-brand-400 transition-colors font-bold">{numero ? String(numero).padStart(8, "0") : "—"}</span>
             </ClickToCopyText>
           </div>
         </div>
       </td>
 
-      {/* Fecha */}
-      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-400">
-        <ClickToCopyText value={fecha}>
-          <span className="hover:text-brand-400 transition-colors">{fecha ?? "—"}</span>
-        </ClickToCopyText>
-      </td>
-
-      {/* Total */}
-      <td className="px-4 py-3 whitespace-nowrap text-right">
-        <div className="flex flex-col items-end">
-          <ClickToCopyText value={total?.toString()}>
-            <span className="inline-block text-sm font-semibold text-white font-mono hover:text-brand-400 transition-colors">
-              {formatARS(total)}
-            </span>
-          </ClickToCopyText>
-          {invoice.otros_tributos > 0 && (
-            <span className="text-[10px] text-amber-500/90 mt-0.5 font-medium" title="Percepciones u otros tributos">
-              + {formatARS(invoice.otros_tributos)} (Ret/Perc)
-            </span>
-          )}
-        </div>
-      </td>
-
-      {/* Cuenta Contable */}
-      <td className="px-4 py-3 whitespace-nowrap">
-        <span className="text-xs text-slate-500 bg-slate-800/60 px-2 py-1 rounded-lg">
-          {cuenta_contable ?? "—"}
-        </span>
-      </td>
-
-      {/* Botones de Copia */}
-      <td className="px-4 py-3 whitespace-nowrap">
-        <div className="flex items-center gap-0.5">
-
-          {/* Copiar Link AFIP — o mostrar sentinel si no hay URL */}
-          {qrIsUrl ? (
-            <CopyButton
-              id={`copy-qr-${cae ?? filename}`}
-              value={qrCopyValue}
-              label="Link AFIP"
-              icon={ExternalLink}
-            />
-          ) : (
-            // Sentinel visual: icono + texto descriptivo, sin botón de copia
-            // Nota: en JSX los componentes dinámicos requieren variable con Mayúscula
-            <div
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px]"
-              title={qr_link ?? "Sin QR"}
-            >
-              {qrSentinel && (() => {
-                const SentinelIcon = qrSentinel.icon;
-                return (
-                  <>
-                    <SentinelIcon size={11} className={qrSentinel.color} />
-                    <span className={qrSentinel.color}>{qrSentinel.label}</span>
-                  </>
-                );
-              })()}
+      {isInvalidReceptor ? (
+        // MODO ULTRA ROJO: Aviso gigante ocultando el resto de las celdas de datos (excepto eliminar)
+        <td colSpan={6} className="px-4 py-3 text-center">
+            <div className="flex flex-col items-center justify-center animate-pulse">
+              <p className="text-white font-black text-xl tracking-tighter uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+                ⚠️ NO ESTÁ A NOMBRE DEL JC ⚠️
+              </p>
+              <p className="text-white/80 text-[11px] font-mono mt-1 font-bold">
+                ARCHIVO: {filename}
+              </p>
             </div>
-          )}
+        </td>
+      ) : (
 
-          {/* Copiar CAE */}
-          <CopyButton
-            id={`copy-cae-${cae ?? filename}`}
-            value={cae}
-            label="CAE"
-            icon={FileText}
-          />
+        <>
+          {/* Fecha */}
+          <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-400">
+            <ClickToCopyText value={fecha}>
+              <span className="hover:text-brand-400 transition-colors">{fecha ?? "—"}</span>
+            </ClickToCopyText>
+          </td>
 
-          {/* Copiar Descripción */}
-          <CopyButton
-            id={`copy-desc-${cae ?? filename}`}
-            value={descripcion}
-            label="Descripción"
-            icon={Copy}
-          />
-        </div>
-      </td>
+          {/* IVA */}
+          <td className="px-4 py-3 whitespace-nowrap text-right">
+            <ClickToCopyText value={iva?.toString()}>
+              <span className="text-xs font-mono text-slate-400 hover:text-brand-400 transition-colors">
+                {formatARS(iva)}
+              </span>
+            </ClickToCopyText>
+          </td>
+
+          {/* Otros / Ret */}
+          <td className="px-4 py-3 whitespace-nowrap text-right">
+            <ClickToCopyText value={invoice.otros_tributos?.toString()}>
+              <span className="text-xs font-mono text-slate-400 hover:text-brand-400 transition-colors">
+                {formatARS(invoice.otros_tributos)}
+              </span>
+            </ClickToCopyText>
+          </td>
+
+          {/* Total */}
+          <td className="px-4 py-3 whitespace-nowrap text-right">
+            <div className="flex flex-col items-end">
+              <ClickToCopyText value={total?.toString()}>
+                <span className={`inline-block text-sm font-semibold font-mono hover:text-brand-400 transition-colors ${
+                  invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-white")
+                }`}>
+                  {formatARS(total)}
+                </span>
+              </ClickToCopyText>
+              {invoice.moneda === "USD" && (
+                <span className="text-[10px] text-blue-500/90 mt-0.5 font-medium">
+                  USD (Conv. a ARS)
+                </span>
+              )}
+            </div>
+          </td>
+
+          {/* Cuenta Contable */}
+          <td className="px-4 py-3 whitespace-nowrap">
+            <span className="text-xs text-slate-500 bg-slate-800/60 px-2 py-1 rounded-lg">
+              {cuenta_contable ?? "—"}
+            </span>
+          </td>
+        </>
+      )}
+
+      {!isInvalidReceptor && (
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="flex items-center gap-0.5">
+
+            {/* Copiar Link AFIP — o mostrar sentinel si no hay URL */}
+            {qrIsUrl ? (
+              <CopyButton
+                id={`copy-qr-${cae ?? filename}`}
+                value={qrCopyValue}
+                label="Link AFIP"
+                icon={ExternalLink}
+              />
+            ) : (
+              // Sentinel visual: icono + texto descriptivo, sin botón de copia
+              <div
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px]"
+                title={qr_link ?? "Sin QR"}
+              >
+                {qrSentinel && (() => {
+                  const SentinelIcon = qrSentinel.icon;
+                  return (
+                    <>
+                      <SentinelIcon size={11} className={qrSentinel.color} />
+                      <span className={qrSentinel.color}>{qrSentinel.label}</span>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Copiar CAE */}
+            <CopyButton
+              id={`copy-cae-${cae ?? filename}`}
+              value={cae}
+              label="CAE"
+              icon={FileText}
+            />
+
+            {/* Copiar Descripción */}
+            <CopyButton
+              id={`copy-desc-${cae ?? filename}`}
+              value={descripcion}
+              label="Descripción"
+              icon={Copy}
+            />
+          </div>
+        </td>
+      )}
+
 
       {/* Botón Eliminar */}
       <td className="px-4 py-3 text-center">

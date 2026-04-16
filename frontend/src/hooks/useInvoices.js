@@ -85,22 +85,29 @@ export const useInvoices = () => {
       return;
     }
 
-    // Mapeamos el modelo al Payload exacto de la DB requirido por el cliente
+    // Mapeamos el modelo al Payload exacto de la DB requerido por el cliente
     const payloads = invoicesToSubmit.map((inv) => ({
       cuit_emisor: inv.cuit ? String(inv.cuit) : null,
       razon_social: inv.razon_social ?? null,
       punto_venta: inv.punto_venta ? String(inv.punto_venta) : null,
       numero_comprobante: inv.numero ? String(inv.numero) : null,
       fecha_emision: inv.fecha ?? null,
+      importe_neto: inv.importe_neto ?? null,
+      iva: inv.iva ?? null,
+      otros_tributos: inv.otros_tributos ?? null,
       total: inv.total ?? null,
       cae: inv.cae ?? null,
-      // NOTA: Acá pasamos la URL del QR, el backend de python la corrige 
-      // y la convierte a afip si era de ARCA.
       url_qr_afip: inv.qr_link ?? null,
-      cuenta_contable_sugerida: "Muebles y Útiles",
-      estado_autorizacion: false,
-      estado_pago: false,
+      cuenta_contable_sugerida: inv.cuenta_contable ?? "Muebles y Útiles",
+      estado_autorizacion: inv.autorizada ?? true,
+      estado_pago: inv.pagada ?? false,
+      moneda: inv.moneda ?? "ARS",
+      cotizacion: inv.cotizacion ?? 1.0,
+      es_credito: inv.es_credito ?? false,
+      cuit_receptor: inv.cuit_receptor ?? null,
     }));
+
+
 
     try {
       const { confirmInvoices } = await import("../services/api");

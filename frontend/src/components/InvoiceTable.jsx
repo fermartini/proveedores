@@ -27,12 +27,14 @@ const COLUMNS = [
   { key: "razon_social", label: "Proveedor",      sortable: true,  align: "left"  },
   { key: "numero",       label: "Nro. Factura",   sortable: true,  align: "left"  },
   { key: "fecha",        label: "Fecha",          sortable: true,  align: "left"  },
+  { key: "iva",          label: "IVA",            sortable: true,  align: "right" },
+  { key: "otros",        label: "Otros / Ret",    sortable: true,  align: "right" },
   { key: "total",        label: "Total",          sortable: true,  align: "right" },
   { key: "cuenta",       label: "Cuenta",         sortable: false, align: "left"  },
-
   { key: "acciones",     label: "Copiar",         sortable: false, align: "center"},
   { key: "eliminar",     label: "Quitar",         sortable: false, align: "center"},
 ];
+
 
 // Ícono de ordenamiento
 function SortIcon({ column, sortKey, sortDir }) {

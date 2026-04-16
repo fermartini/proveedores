@@ -25,13 +25,19 @@ from services.parser_service import TipoFacturaInvalidaError
 
 logger = logging.getLogger(__name__)
 
-# Mapeo de códigos AFIP a letras de comprobante
+# Mapeo de códigos AFIP a etiquetas descriptivas
 TIPO_COMPROBANTE_MAP = {
-    1: "A", 2: "A", 3: "A", 6: "B", 7: "B", 8: "B", 11: "C", 12: "C", 13: "C"
+    1: "A", 2: "ND A", 3: "NC A", 
+    6: "B", 7: "ND B", 8: "NC B", 
+    11: "C", 12: "ND C", 13: "NC C"
 }
+
+CUIT_JC = "30527990773"
+
 
 
 def _decode_qr_data(qr_url: str) -> dict:
+
     """Extrae y decodifica el JSON en base64 de la URL del QR AFIP/ARCA."""
     if not qr_url or not qr_url.lower().startswith("http"):
         return {}
@@ -207,13 +213,35 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
         if qr_data.get("nroCmp"): parsed_fields["numero"] = int(qr_data.get("nroCmp"))
         if qr_data.get("importe"): parsed_fields["total"] = float(qr_data.get("importe"))
         if qr_data.get("codAut"): parsed_fields["cae"] = str(qr_data.get("codAut"))
+        
+        # Extraer receptor del QR
+        if qr_data.get("nroDocRec"):
+            parsed_fields["cuit_receptor"] = str(qr_data.get("nroDocRec"))
 
-    # 5. Validación mínima
+    # 5. Validación mínima y Receptor
     razon_social = parsed_fields.get("razon_social")
     numero = parsed_fields.get("numero")
+    cuit_receptor = parsed_fields.get("cuit_receptor")
+    
+    # Validar receptor (Jockey Club)
+    receptor_ok = True
+    if cuit_receptor:
+        # Normalizar y comparar los últimos 11 dígitos por si viene con prefijo de tipo doc
+        clean_receptor = str(cuit_receptor).replace("-", "").strip()
+        if clean_receptor and clean_receptor != CUIT_JC:
+            receptor_ok = False
+
     datos_minimos_ok = bool(razon_social and str(razon_social).strip()) and (numero is not None)
 
-    if not datos_minimos_ok:
+    if not receptor_ok:
+        status = "receptor_invalido"
+        error_detail = f"⚠️ NO ESTÁ A NOMBRE DEL JC - {filename}"
+    elif tipo_final == "B":
+        status = "tipo_invalido"
+        error_detail = "Las facturas tipo B no están permitidas."
+    elif not datos_minimos_ok:
+
+
         if qr_url and qr_url.lower().startswith("http"):
             status = "procesado" # Si tiene QR pero no pudo leer texto/IA, se marca como procesado igual (el confirm fallará luego si faltan datos)
         else:
@@ -221,40 +249,66 @@ def _process_single_page(filename: str, page_image, page_text: Optional[str]) ->
             if status == "error":
                 error_detail = "No se pudieron extraer datos mínimos (Razón Social/Número)."
 
-    # 6. Reglas de cálculo
-    tipo_final = parsed_fields.get("tipo_factura")
+    # 6. Reglas de cálculo y Conversión USD
+    tipo_final = parsed_fields.get("tipo_factura", "B")
+    es_credito = "NC" in str(tipo_final).upper()
+    moneda = parsed_fields.get("moneda", "ARS")
+    cotizacion = parsed_fields.get("cotizacion", 1.0)
+    
     total = parsed_fields.get("total")
     neto = parsed_fields.get("importe_neto")
     iva = parsed_fields.get("iva")
-    otros_tributos = None
+    otros_tributos = parsed_fields.get("otros_tributos")
 
+    # Conversión automática si es USD
+    if moneda == "USD" and cotizacion > 1:
+        logger.info(f"[PDF Service] Convirtiendo valores de USD a ARS (Cotización: {cotizacion})")
+        if total: total = round(total * cotizacion, 2)
+        if neto: neto = round(neto * cotizacion, 2)
+        if iva: iva = round(iva * cotizacion, 2)
+        if otros_tributos: otros_tributos = round(otros_tributos * cotizacion, 2)
+
+    # Lógica de importes por tipo
     if tipo_final == "C" and total is not None:
-        parsed_fields["importe_neto"] = total
-        parsed_fields["iva"] = 0.0
-    elif tipo_final == "A" and total is not None:
+        if neto is None: neto = total
+        if iva is None: iva = 0.0
+    elif "A" in str(tipo_final) and total is not None:
         if neto is not None and iva is not None:
             diff = round(total - (neto + iva), 2)
             if diff > 0.01: otros_tributos = diff
+
+    # IMPORTANTE: Si es Nota de Crédito, el total debe ser negativo para que los balances den bien
+    if es_credito and total is not None and total > 0:
+        total = -total
+        # También el IVA y Neto si los queremos negativos en la BD
+        if neto: neto = -abs(neto)
+        if iva: iva = -abs(iva)
+        if otros_tributos: otros_tributos = -abs(otros_tributos)
 
     if used_llm and not error_detail and status == "procesado":
         error_detail = "⚡ Datos extraídos mediante IA (Gemini 1.5 Flash)."
 
     return InvoiceResult(
+        id=f"{filename}-{datetime.utcnow().timestamp()}", # ID más robusto
         filename=filename,
         cuit=parsed_fields.get("cuit"),
         razon_social=parsed_fields.get("razon_social"),
-        tipo_factura=parsed_fields.get("tipo_factura", "B"),
+        tipo_factura=tipo_final,
         punto_venta=parsed_fields.get("punto_venta"),
         numero=parsed_fields.get("numero"),
         fecha=parsed_fields.get("fecha"),
-        importe_neto=parsed_fields.get("importe_neto"),
-        iva=parsed_fields.get("iva"),
+        importe_neto=neto,
+        iva=iva,
         otros_tributos=otros_tributos,
-        total=parsed_fields.get("total"),
+        total=total,
+        moneda=moneda,
+        cotizacion=cotizacion,
+        es_credito=es_credito,
         cae=parsed_fields.get("cae"),
         qr_link=qr_url,
         status=status,
         error_detail=error_detail,
         created_at=datetime.utcnow().isoformat(),
     )
+
 

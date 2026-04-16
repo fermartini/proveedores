@@ -28,16 +28,24 @@ const STATUS_CONFIG = {
   tipo_invalido: {
     label: "Tipo inválido",
     icon: ShieldOff,
-    classes: "bg-orange-500/10 text-orange-400 border border-orange-500/30",
-    dotClass: "bg-orange-400",
+    classes: "bg-red-500/10 text-red-500 border border-red-500/30",
+    dotClass: "bg-red-500",
   },
+
   error: {
     label: "Error",
     icon: XCircle,
     classes: "bg-red-500/10 text-red-400 border border-red-500/30",
     dotClass: "bg-red-400",
   },
+  receptor_invalido: {
+    label: "Receptor Erróneo",
+    icon: ShieldOff,
+    classes: "bg-red-600/20 text-red-500 border border-red-600/40",
+    dotClass: "bg-red-600",
+  },
   pendiente: {
+
     label: "Pendiente",
     icon: Clock,
     classes: "bg-slate-500/10 text-slate-400 border border-slate-500/30",
