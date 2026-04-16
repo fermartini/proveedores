@@ -47,7 +47,11 @@ export default function DropZone({ onUpload, uploading, uploadProgress, error })
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "application/pdf": [".pdf"] },
+    accept: { 
+      "application/pdf": [".pdf"],
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"]
+    },
     multiple: true,
     disabled: uploading,
   });
@@ -136,7 +140,7 @@ export default function DropZone({ onUpload, uploading, uploadProgress, error })
           ) : (
             <>
               <p className="text-base font-semibold text-slate-200">
-                Arrastrá tus facturas PDF aquí
+                Arrastrá tus facturas PDF o Imágenes aquí
               </p>
               <p className="text-sm text-slate-500 mt-1.5">
                 o{" "}
@@ -156,7 +160,7 @@ export default function DropZone({ onUpload, uploading, uploadProgress, error })
                 ))}
               </div>
               <p className="text-xs text-slate-600 mt-3">
-                Máximo 50 archivos · Formato PDF
+                Máximo 50 archivos · Formato PDF, JPG o PNG
               </p>
             </>
           )}

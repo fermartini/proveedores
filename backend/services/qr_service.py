@@ -3,21 +3,12 @@ services/qr_service.py
 -----------------------
 Servicio de extracción y corrección del código QR de facturas AFIP/ARCA.
 
-Utiliza PyMuPDF (fitz) para renderizar las páginas del PDF como imágenes
-sin necesidad de poppler ni ninguna dependencia de sistema operativo.
+Esta es una versión "Omnívora" y extremadamente robusta de Computer Vision.
+Utiliza OpenCV, Numpy, PIL y ZXing para preprocesamiento e Inferencia IA.
 
-Flujo:
-  1. Abrir el PDF con fitz (PyMuPDF).
-  2. Renderizar cada página a un pixmap (imagen en memoria). Se intentan escalas mayores si falla.
-  3. Convertir el pixmap a PIL Image.
-  4. Escanear la imagen con pyzbar buscando códigos QR.
-  5. Si se encuentra una URL con dominio "arca.gob.ar", reemplazarla por "afip.gob.ar".
-
-Valores de retorno posibles:
-  - URL válida (string comenzando con "http") → QR leído correctamente.
-  - "NO TIENE"          → El PDF no contiene ningún código QR.
-  - "NO SE PUEDE LEER"  → Se detectó algo parecido a un QR pero no pudo decodificarse
-                          (código cortado, dañado o con baja resolución).
+FASE 1: Enrutamiento inicial (PDF vía PyMuPDF, Imágenes vía PIL).
+FASE 2: Pipeline Estructurado de Extracción con OpenCV (Upscaling, Otsu).
+FASE 3: Estabilización de URLs.
 """
 
 import io
@@ -25,37 +16,26 @@ import re
 import logging
 from typing import Optional
 
-from PIL import Image
-from pyzbar import pyzbar
+import cv2
+import numpy as np
+from PIL import Image, ImageOps
+import zxingcpp
 
 logger = logging.getLogger(__name__)
 
-# Valor sentinel cuando el PDF no tiene ningún código QR
 QR_NO_TIENE = "NO TIENE"
-
-# Valor sentinel cuando el QR existe pero está cortado / ilegible
 QR_NO_SE_PUEDE_LEER = "NO SE PUEDE LEER"
+
+# Resolución de render del PDF: Matrix(4,4) ≈ 300 DPI
+_PDF_RENDER_SCALE = 4.0
 
 
 def extract_qr_url(pdf_bytes: bytes) -> str:
-    """
-    Extrae la URL del código QR de AFIP de un PDF de factura.
-
-    Args:
-        pdf_bytes: Contenido binario del PDF.
-
-    Returns:
-        - URL del QR (con dominio afip.gob.ar ya corregido) si se leyó correctamente.
-        - "NO TIENE" si el PDF no tiene ningún QR.
-        - "NO SE PUEDE LEER" si el QR está cortado, dañado o no se pudo decodificar.
-    """
+    """FASE 1 - Enrutador (PDF): Renderiza a imagen nativa 300DPI."""
     try:
-        import fitz  # PyMuPDF — no necesita poppler
+        import fitz
     except ImportError:
-        logger.error(
-            "[QR] PyMuPDF no instalado. "
-            "Ejecutar: pip install PyMuPDF"
-        )
+        logger.error("[QR] PyMuPDF no instalado.")
         return QR_NO_SE_PUEDE_LEER
 
     try:
@@ -64,69 +44,124 @@ def extract_qr_url(pdf_bytes: bytes) -> str:
         logger.error(f"[QR] No se pudo abrir el PDF con PyMuPDF: {exc}")
         return QR_NO_SE_PUEDE_LEER
 
-    found_qr_region = False  # Para distinguir "no tiene" de "no se puede leer"
-
-    for page_num in range(min(len(doc), 2)):  # Solo primeras 2 páginas
+    for page_num in range(min(len(doc), 2)):
         page = doc[page_num]
+        
+        # Matrix(4,4) emula resolución de ~300 DPI, logrando máxima nitidez nativa
+        mat = fitz.Matrix(4.0, 4.0)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
 
-        # Intentaremos distintas escalas (zoom). A veces el QR es muy pequeño para pyzbar en 2x.
-        for scale in [2.0, 3.0, 4.0]:
-            mat = fitz.Matrix(scale, scale)
-            pix = page.get_pixmap(matrix=mat, alpha=False)
+        img_bytes = pix.tobytes("png")
+        pil_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        
+        # Quiet Zone artificial en caso de márgenes estrechos
+        pil_image = ImageOps.expand(pil_image, border=40, fill='white')
 
-            # Convertir pixmap → bytes PNG → PIL Image
-            img_bytes = pix.tobytes("png")
-            pil_image = Image.open(io.BytesIO(img_bytes))
-
-            # Escanear en busca de QR codes con pyzbar
-            decoded_objects = pyzbar.decode(pil_image)
-
-            if not decoded_objects:
-                # Intentar con la página en escala de grises (mejor contraste para pyzbar)
-                gray_image = pil_image.convert("L")
-                decoded_objects = pyzbar.decode(gray_image)
-
-            for obj in decoded_objects:
-                raw = obj.data.decode("utf-8", errors="ignore").strip()
-
-                if raw.startswith("http"):
-                    # ✅ QR leído correctamente — corregir dominio y retornar
-                    url = fix_arca_domain(raw)
-                    logger.info(f"[QR] ✅ QR válido encontrado en página {page_num + 1} (Escala {scale}x): {url[:70]}...")
-                    doc.close()
-                    return url
-                else:
-                    # Se decodificó algo pero no es una URL → QR presente pero inválido
-                    logger.warning(f"[QR] QR encontrado pero contenido inválido en escala {scale}x: '{raw[:40]}'")
-                    found_qr_region = True
-
-            # Detectar si hay una región que parece QR (módulo de detección de pyzbar)
-            all_found = pyzbar.decode(pil_image, symbols=None)
-            if all_found:
-                found_qr_region = True
+        # Lanzar a la FASE 2
+        result = extraer_qr_robusto(pil_image)
+        if result and result.lower().startswith("http"):
+            url = fix_arca_domain(result)
+            logger.info(f"[QR] ✅ QR válido encontrado en PDF (Pág {page_num + 1}): {url[:70]}...")
+            doc.close()
+            return url
 
     doc.close()
+    logger.info("[QR] ℹ️ El PDF no arrojó lectura de código QR.")
+    return QR_NO_TIENE
 
-    if found_qr_region:
-        logger.warning("[QR] ⚠️ Se detectó un QR pero no se pudo leer (cortado o dañado).")
-        return QR_NO_SE_PUEDE_LEER
-    else:
-        logger.info("[QR] ℹ️ El PDF no contiene ningún código QR.")
+
+def extract_qr_from_image(img_bytes: bytes) -> str:
+    """FASE 1 - Enrutador (Imagen): Abre en RAM y lanza a FASE 2."""
+    try:
+        # Convertimos RGBA -> RGB puro
+        raw_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        
+        # Generamos borde artificial obligatorio para asegurar lectura de fragmentos
+        pil_image = ImageOps.expand(raw_img, border=60, fill='white')
+        
+        # Lanzar a la FASE 2
+        result = extraer_qr_robusto(pil_image)
+        if result and result.lower().startswith("http"):
+            url = fix_arca_domain(result)
+            logger.info(f"[QR] ✅ QR válido encontrado en Imagen: {url[:70]}...")
+            return url
+            
         return QR_NO_TIENE
+
+    except Exception as exc:
+        logger.error(f"[QR] Error al instanciar Imagen: {exc}")
+        return QR_NO_SE_PUEDE_LEER
+
+
+def extraer_qr_robusto(pil_image: Image.Image) -> Optional[str]:
+    """
+    FASE 2 - PIPELINE DE VISIÓN ARTIFICIAL (FALLBACKS CASCADA)
+    Toma una imagen base y agota iteraciones matemáticas antes de rendirse.
+    """
+    # ====== INTENTO 1: Inferencia Directa ======
+    decoded = zxingcpp.read_barcodes(pil_image)
+    if decoded:
+        return decoded[0].text.strip()
+
+    # ====== PRE-PROCESAMIENTO OPENCV ======
+    # Convertir PIL (RGB) -> Array Numpy -> OpenCV (BGR)
+    np_img = np.array(pil_image)
+    bgr_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
+
+    # ====== INTENTO 2: Upscaling Bícubico (x2) & Grayscale ======
+    # cv2.INTER_CUBIC genera contornos sintéticos para "despixelar" facturas escaneadas o web
+    h, w = bgr_img.shape[:2]
+    upscaled = cv2.resize(bgr_img, (w * 2, h * 2), interpolation=cv2.INTER_CUBIC)
+    gray_img = cv2.cvtColor(upscaled, cv2.COLOR_BGR2GRAY)
+
+    decoded = zxingcpp.read_barcodes(gray_img)
+    if decoded:
+        logger.info("[QR] IA logró lectura en Intento 2 (Upscaling Cúbico)")
+        return decoded[0].text.strip()
+
+    # ====== INTENTO 3: Binarización Extrema por Umbral de Otsu ======
+    # Fuerza cada pixel de la imagen a 0 o 255 matemáticamente, 
+    # destruyendo todo el ruido, sombras oscuras o fondos grises.
+    _, binary_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+    decoded = zxingcpp.read_barcodes(binary_img)
+    if decoded:
+        logger.info("[QR] IA logró lectura en Intento 3 (Binarización Otsu)")
+        return decoded[0].text.strip()
+
+    # Si todo falla, retornamos None
+    return None
+
+
+def render_first_page(file_bytes: bytes, is_pdf: bool) -> Optional[Image.Image]:
+    """
+    Renderiza la primera página de un PDF o abre directamente una Imagen.
+    Devuelve una PIL Image en formato RGB lista para ZXing o para el LLM.
+    Retorna None si falla o el archivo es inválido.
+    """
+    try:
+        if is_pdf:
+            import fitz
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+            if len(doc) == 0:
+                return None
+            page = doc[0]
+            mat = fitz.Matrix(_PDF_RENDER_SCALE, _PDF_RENDER_SCALE)
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            doc.close()
+            img_bytes = pix.tobytes("png")
+            pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        else:
+            pil = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+
+        return pil
+    except Exception as exc:
+        logger.error(f"[QR] render_first_page error: {exc}")
+        return None
 
 
 def fix_arca_domain(url: str) -> str:
-    """
-    Corrige el dominio del link del QR.
-    ARCA es el nuevo nombre institucional de AFIP, pero el verificador de
-    comprobantes sigue funcionando bajo el dominio afip.gob.ar.
-
-    Args:
-        url: URL original extraída del QR (puede ser arca.gob.ar o afip.gob.ar).
-
-    Returns:
-        URL con el dominio normalizado a afip.gob.ar.
-    """
+    """FASE 3 - Limpieza Sintáctica."""
     if not url or url in (QR_NO_TIENE, QR_NO_SE_PUEDE_LEER):
         return url
 
@@ -136,8 +171,4 @@ def fix_arca_domain(url: str) -> str:
         url,
         flags=re.IGNORECASE,
     )
-
-    if corrected != url:
-        logger.info("[QR] Dominio corregido: arca.gob.ar → afip.gob.ar")
-
     return corrected

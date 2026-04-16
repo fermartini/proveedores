@@ -32,6 +32,7 @@ export default function App() {
     handleUpload,
     handleConfirm,
     clearError,
+    removeInvoice,
   } = useInvoices();
 
   // Formatea número como moneda ARS abreviada para StatsCards
@@ -150,6 +151,7 @@ export default function App() {
             invoices={invoices} 
             onConfirm={handleConfirm} 
             isConfirming={uploading} 
+            onRemove={removeInvoice}
           />
         </section>
 

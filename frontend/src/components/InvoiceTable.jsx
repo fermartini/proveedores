@@ -20,9 +20,8 @@ import {
 } from "lucide-react";
 import InvoiceRow from "./InvoiceRow";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 50;
 
-// Columnas de la tabla con sus configuraciones
 const COLUMNS = [
   { key: "status",       label: "Estado",        sortable: false, align: "left"  },
   { key: "razon_social", label: "Proveedor",      sortable: true,  align: "left"  },
@@ -31,7 +30,7 @@ const COLUMNS = [
   { key: "total",        label: "Total",          sortable: true,  align: "right" },
   { key: "cuenta",       label: "Cuenta",         sortable: false, align: "left"  },
   { key: "acciones",     label: "Copiar",         sortable: false, align: "center"},
-  { key: "estados",      label: "Estado ERP",     sortable: false, align: "left"  },
+  { key: "eliminar",     label: "Quitar",         sortable: false, align: "center"},
 ];
 
 // Ícono de ordenamiento
@@ -47,8 +46,9 @@ function SortIcon({ column, sortKey, sortDir }) {
  * @param {object[]} props.invoices - Lista de facturas.
  * @param {Function} props.onConfirm - Callback para confirmar.
  * @param {boolean}  props.isConfirming - Estado de guardado.
+ * @param {Function} props.onRemove - Callback para eliminar factura.
  */
-export default function InvoiceTable({ invoices, onConfirm, isConfirming }) {
+export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemove }) {
   const [search, setSearch]     = useState("");
   const [sortKey, setSortKey]   = useState("fecha");
   const [sortDir, setSortDir]   = useState("desc");
@@ -69,12 +69,15 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming }) {
   // ---- Ordenamiento ----
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const aVal = a[sortKey] ?? 0;
-      const bVal = b[sortKey] ?? 0;
-      if (typeof aVal === "string") {
+      const aVal = a[sortKey] ?? "";
+      const bVal = b[sortKey] ?? "";
+      
+      if (typeof aVal === "string" || typeof bVal === "string") {
+        const aStr = String(aVal);
+        const bStr = String(bVal);
         return sortDir === "asc"
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal);
+          ? aStr.localeCompare(bStr)
+          : bStr.localeCompare(aStr);
       }
       return sortDir === "asc" ? aVal - bVal : bVal - aVal;
     });
@@ -203,6 +206,7 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming }) {
                     key={invoice.id ?? invoice.filename ?? idx}
                     invoice={invoice}
                     index={idx}
+                    onRemove={() => onRemove(invoice.filename)}
                   />
                 ))
               ) : (

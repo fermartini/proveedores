@@ -62,12 +62,13 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
             detail=f"Máximo 50 archivos por request. Se recibieron {len(files)}."
         )
 
-    # Validar que todos sean PDF antes de procesar
+    # Validar que todos sean formatos permitidos antes de procesar
+    allowed_extensions = (".pdf", ".jpg", ".jpeg", ".png")
     for file in files:
-        if not file.filename.lower().endswith(".pdf"):
+        if not file.filename.lower().endswith(allowed_extensions):
             raise HTTPException(
                 status_code=422,
-                detail=f"El archivo '{file.filename}' no es un PDF válido."
+                detail=f"El archivo '{file.filename}' no es un formato válido. Usa PDF, JPG o PNG."
             )
 
     # Leer todos los bytes en memoria (async)
@@ -104,11 +105,40 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
                     error_detail=str(exc),
                 ))
 
-    # Ordenar resultados por nombre de archivo para consistencia en la UI
-    results.sort(key=lambda r: r.filename)
+    # --- Lógica de Desduplicación Avanzada (QR o CUIT + Nro Factura) ---
+    unique_results = []
+    seen_qrs = set()
+    seen_datos = set()
 
-    logger.info(f"[Upload] Completado: {len(results)} facturas procesadas.")
-    return results
+    for r in results:
+        is_duplicate = False
+        
+        # 1. Match Exacto por Link de QR
+        if r.qr_link and r.qr_link.lower().startswith("http"):
+            if r.qr_link in seen_qrs:
+                is_duplicate = True
+            else:
+                seen_qrs.add(r.qr_link)
+                
+        # 2. Match por CUIT y Número (Incluso si uno vino del QR y el otro de la IA sin QR)
+        if not is_duplicate and r.cuit and r.numero is not None:
+            key_datos = (str(r.cuit).strip(), r.numero)
+            if key_datos in seen_datos:
+                is_duplicate = True
+            else:
+                seen_datos.add(key_datos)
+                
+        if is_duplicate:
+            logger.info(f"[Upload] ♻️ Ignorando archivo duplicado: {r.filename} (CUIT: {r.cuit}, Nro: {r.numero})")
+            continue
+            
+        unique_results.append(r)
+
+    # Ordenar resultados por nombre de archivo para consistencia en la UI
+    unique_results.sort(key=lambda r: r.filename)
+
+    logger.info(f"[Upload] Completado: {len(unique_results)} facturas únicas listas (de {len(file_data)} originales).")
+    return unique_results
 
 
 # ---------------------------------------------------------------------------

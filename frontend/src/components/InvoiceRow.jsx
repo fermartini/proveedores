@@ -14,7 +14,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Copy, Check, ExternalLink, FileText, Building2, WifiOff, QrCode
+  Copy, Check, ExternalLink, FileText, Building2, WifiOff, QrCode, Trash2
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
@@ -152,8 +152,9 @@ const formatNumero = (pv, num) => {
  * @param {object} props
  * @param {object} props.invoice - Objeto InvoiceResult.
  * @param {number} props.index   - Índice para animación escalonada.
+ * @param {function} props.onRemove - Callback para eliminar la fila.
  */
-export default function InvoiceRow({ invoice, index }) {
+export default function InvoiceRow({ invoice, index, onRemove }) {
   const {
     filename, cuit, razon_social, tipo_factura, punto_venta, numero,
     fecha, importe_neto, iva, total, cae, qr_link, cuenta_contable,
@@ -176,8 +177,8 @@ export default function InvoiceRow({ invoice, index }) {
   // El botón de copia del Link AFIP solo está activo si hay URL real
   const qrCopyValue = qrIsUrl ? qr_link : null;
 
-  // Para filas de tipo_invalido, mostrar el error en la celda del proveedor
-  const isRejected = status === "tipo_invalido";
+  // Para filas rechazadas o con error fatal, mostrar el detalle en la celda del proveedor
+  const isErrorRow = status === "tipo_invalido" || status === "error";
 
   return (
     <motion.tr
@@ -195,12 +196,12 @@ export default function InvoiceRow({ invoice, index }) {
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5">
           <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            isRejected ? "bg-orange-500/10" : "bg-slate-700/60"
+            isErrorRow ? "bg-orange-500/10" : "bg-slate-700/60"
           }`}>
-            <Building2 size={13} className={isRejected ? "text-orange-400" : "text-slate-400"} />
+            <Building2 size={13} className={isErrorRow ? "text-orange-400" : "text-slate-400"} />
           </div>
           <div className="min-w-0">
-            {isRejected ? (
+            {isErrorRow ? (
               // Fila rechazada: mostrar el archivo y el motivo
               <>
                 <p className="text-xs font-mono text-slate-500 truncate max-w-[200px]">
@@ -328,28 +329,15 @@ export default function InvoiceRow({ invoice, index }) {
         </div>
       </td>
 
-      {/* Flags: Autorizada | Pagada */}
-      <td className="px-4 py-3 whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          <span
-            className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-              autorizada
-                ? "bg-emerald-500/15 text-emerald-400"
-                : "bg-slate-700/60 text-slate-600"
-            }`}
-          >
-            {autorizada ? "✓ Auth" : "Auth"}
-          </span>
-          <span
-            className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-              pagada
-                ? "bg-blue-500/15 text-blue-400"
-                : "bg-slate-700/60 text-slate-600"
-            }`}
-          >
-            {pagada ? "✓ Pago" : "Pago"}
-          </span>
-        </div>
+      {/* Botón Eliminar */}
+      <td className="px-4 py-3 text-center">
+        <button
+          onClick={onRemove}
+          className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors tooltip-trigger"
+          title="Eliminar de la lista"
+        >
+          <Trash2 size={15} />
+        </button>
       </td>
     </motion.tr>
   );

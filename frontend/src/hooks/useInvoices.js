@@ -126,7 +126,14 @@ export const useInvoices = () => {
   const clearError = useCallback(() => setError(null), []);
 
   // ---------------------------------------------------------------------------
-  // Estadísticas derivadas (memoizadas implícitamente por ser derivadas del estado)
+  // removeInvoice — Eliminar una factura del estado local antes de confirmarla
+  // ---------------------------------------------------------------------------
+  const removeInvoice = useCallback((filename) => {
+    setInvoices((prev) => prev.filter((inv) => inv.filename !== filename));
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Estadísticas derivadas
   // ---------------------------------------------------------------------------
   const stats = {
     totalFacturas: invoices.length,
@@ -145,5 +152,6 @@ export const useInvoices = () => {
     handleUpload,
     handleConfirm,
     clearError,
+    removeInvoice,
   };
 };
