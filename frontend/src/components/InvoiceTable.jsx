@@ -204,11 +204,12 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
               {paginated.length > 0 ? (
                 paginated.map((invoice, idx) => (
                   <InvoiceRow
-                    key={invoice.id ?? invoice.filename ?? idx}
+                    key={invoice.id}
                     invoice={invoice}
                     index={idx}
-                    onRemove={() => onRemove(invoice.filename)}
+                    onRemove={() => onRemove(invoice.id)}
                   />
+
                 ))
               ) : (
                 /* Estado vacío */

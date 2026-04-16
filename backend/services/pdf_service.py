@@ -107,32 +107,36 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
             
             res = _process_single_page(filename, page_img, page_text)
             
-            if res and res.status != "error":
-                is_duplicate = False
-                
-                qr_link = res.qr_link if (res.qr_link and res.qr_link.lower().startswith("http")) else None
-                inv_key = (str(res.cuit), res.numero) if (res.cuit and res.numero) else None
-
-                # 1. Chequeo por QR
-                if qr_link:
-                    if qr_link in seen_qrs:
-                        is_duplicate = True
-                    else:
-                        seen_qrs.add(qr_link)
-                
-                # 2. Chequeo por CUIT + Número (si no se duplicó por QR)
-                if not is_duplicate and inv_key:
-                    if inv_key in seen_invoices:
-                        is_duplicate = True
-                    else:
-                        seen_invoices.add(inv_key)
-
-                if is_duplicate:
-                    logger.info(f"[PDF Service] Página {i+1} duplicada (Original/Duplicado/etc) en {filename}, ignorando.")
-                    continue
-            
             if res:
+                # Asignar ID único basado en archivo y página
+                res.id = f"{filename}-{i}"
+
+                if res.status != "error":
+                    is_duplicate = False
+                    
+                    qr_link = res.qr_link if (res.qr_link and res.qr_link.lower().startswith("http")) else None
+                    inv_key = (str(res.cuit), res.numero) if (res.cuit and res.numero) else None
+
+                    # 1. Chequeo por QR
+                    if qr_link:
+                        if qr_link in seen_qrs:
+                            is_duplicate = True
+                        else:
+                            seen_qrs.add(qr_link)
+                    
+                    # 2. Chequeo por CUIT + Número (si no se duplicó por QR)
+                    if not is_duplicate and inv_key:
+                        if inv_key in seen_invoices:
+                            is_duplicate = True
+                        else:
+                            seen_invoices.add(inv_key)
+
+                    if is_duplicate:
+                        logger.info(f"[PDF Service] Página {i+1} duplicada en {filename}, ignorando.")
+                        continue
+                
                 results.append(res)
+
 
 
 

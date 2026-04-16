@@ -18,7 +18,9 @@ class InvoiceResult(BaseModel):
     """
 
     # --- Identificación del archivo ---
+    id: Optional[str] = Field(None, description="ID temporal único para manejo en UI")
     filename: str = Field(..., description="Nombre del archivo PDF procesado")
+
 
     # --- Datos del emisor ---
     cuit: Optional[str] = Field(None, description="CUIT del emisor (sin guiones, 11 dígitos)")

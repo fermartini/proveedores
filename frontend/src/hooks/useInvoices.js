@@ -44,18 +44,15 @@ export const useInvoices = () => {
         setUploadProgress(percent);
       });
 
-      // Agregar resultados al estado local inmediatamente (sin esperar Firestore)
-      // Firestore los sobreescribirá cuando el listener notifique el cambio.
+      // Agregar resultados al estado local. 
+      // Usamos el ID único (filename + index) para no perder facturas del mismo archivo.
       setInvoices((prev) => {
-        // Evitar duplicados si Firestore ya los agregó
-        const existingFilenames = new Set(prev.map((inv) => inv.filename));
-        const newResults = results.filter(
-          (r) => !existingFilenames.has(r.filename)
-        );
-        return [...results, ...prev.filter(
-          (inv) => !results.find((r) => r.filename === inv.filename)
-        )];
+        const newResults = results || [];
+        // Filtramos prev para quitar los que tengan el mismo ID que los nuevos resultados (reemplazo)
+        const newIds = new Set(newResults.map(r => r.id));
+        return [...newResults, ...prev.filter(inv => !newIds.has(inv.id))];
       });
+
 
     } catch (err) {
       const message =
@@ -129,8 +126,8 @@ export const useInvoices = () => {
   // ---------------------------------------------------------------------------
   // removeInvoice — Eliminar una factura del estado local antes de confirmarla
   // ---------------------------------------------------------------------------
-  const removeInvoice = useCallback((filename) => {
-    setInvoices((prev) => prev.filter((inv) => inv.filename !== filename));
+  const removeInvoice = useCallback((id) => {
+    setInvoices((prev) => prev.filter((inv) => inv.id !== id));
   }, []);
 
   // ---------------------------------------------------------------------------
