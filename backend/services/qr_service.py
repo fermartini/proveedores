@@ -133,31 +133,37 @@ def extraer_qr_robusto(pil_image: Image.Image) -> Optional[str]:
     return None
 
 
+def render_pdf_pages(file_bytes: bytes):
+    """
+    Generador que renderiza todas las páginas de un PDF a imágenes PIL.
+    """
+    try:
+        import fitz
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        for page in doc:
+            mat = fitz.Matrix(_PDF_RENDER_SCALE, _PDF_RENDER_SCALE)
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            img_bytes = pix.tobytes("png")
+            yield Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        doc.close()
+    except Exception as exc:
+        logger.error(f"[QR] render_pdf_pages error: {exc}")
+
+
 def render_first_page(file_bytes: bytes, is_pdf: bool) -> Optional[Image.Image]:
     """
     Renderiza la primera página de un PDF o abre directamente una Imagen.
-    Devuelve una PIL Image en formato RGB lista para ZXing o para el LLM.
-    Retorna None si falla o el archivo es inválido.
     """
     try:
         if is_pdf:
-            import fitz
-            doc = fitz.open(stream=file_bytes, filetype="pdf")
-            if len(doc) == 0:
-                return None
-            page = doc[0]
-            mat = fitz.Matrix(_PDF_RENDER_SCALE, _PDF_RENDER_SCALE)
-            pix = page.get_pixmap(matrix=mat, alpha=False)
-            doc.close()
-            img_bytes = pix.tobytes("png")
-            pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+            pages = render_pdf_pages(file_bytes)
+            return next(pages, None)
         else:
-            pil = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-
-        return pil
+            return Image.open(io.BytesIO(file_bytes)).convert("RGB")
     except Exception as exc:
         logger.error(f"[QR] render_first_page error: {exc}")
         return None
+
 
 
 def fix_arca_domain(url: str) -> str:

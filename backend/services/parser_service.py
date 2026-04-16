@@ -56,33 +56,36 @@ class TipoFacturaInvalidaError(ValueError):
 
 def parse_invoice(pdf_bytes: bytes) -> Dict[str, Any]:
     """
-    Extrae todos los campos relevantes de una factura AFIP (tipo A, B o C) del PDF.
-
-    Args:
-        pdf_bytes: Contenido binario del PDF.
-
-    Returns:
-        Diccionario con los campos extraídos. Los campos no encontrados son None.
-
-    Raises:
-        TipoFacturaInvalidaError: Si el PDF no parece ser una factura AFIP válida
-                                  (no se puede extraer texto ni detectar ningún campo).
+    Extrae todos los campos relevantes de una factura del PDF completo.
     """
     text = _extract_text(pdf_bytes)
-
     if not text:
-        logger.warning("[Parser] No se pudo extraer texto del PDF (posiblemente escaneado).")
+        return _empty_result()
+    return parse_text(text)
+
+
+def extract_pages_text(pdf_bytes: bytes):
+    """
+    Generador que extrae el texto de cada página del PDF por separado.
+    """
+    import io
+    try:
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                yield page.extract_text()
+    except Exception as exc:
+        logger.error(f"[Parser] Error al extraer texto por página: {exc}")
+
+
+def parse_text(text: str) -> Dict[str, Any]:
+    """
+    Aplica las expresiones regulares sobre un bloque de texto para extraer campos.
+    """
+    if not text:
         return _empty_result()
 
-    logger.debug(f"[Parser] Texto extraído ({len(text)} chars): {text[:300]}...")
-
-    # Detectar tipo de factura (A, B o C) — ya no es restrictivo, solo informativo
+    # Detectar tipo de factura
     tipo = _parse_tipo_factura(text)
-
-    if tipo:
-        logger.info(f"[Parser] ✅ Factura tipo {tipo} detectada — procesando.")
-    else:
-        logger.warning("[Parser] Tipo de factura no detectado — se intenta parsear igual.")
 
     result = {
         "tipo_factura":  tipo,
@@ -98,6 +101,7 @@ def parse_invoice(pdf_bytes: bytes) -> Dict[str, Any]:
     }
 
     return result
+
 
 
 # ---------------------------------------------------------------------------

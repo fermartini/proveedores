@@ -81,9 +81,7 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
 
     results: List[InvoiceResult] = []
 
-    # Procesamiento paralelo: cada PDF en un thread separado
-    # ThreadPoolExecutor es adecuado porque pdf2image y pdfplumber
-    # liberan el GIL durante operaciones I/O-intensivas.
+    # Procesamiento paralelo: cada archivo puede generar N facturas (multi-página)
     with ThreadPoolExecutor(max_workers=min(len(file_data), 8)) as executor:
         future_map = {
             executor.submit(pdf_service.process_pdf, filename, content): filename
@@ -93,24 +91,29 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
         for future in as_completed(future_map):
             filename = future_map[future]
             try:
-                invoice: InvoiceResult = future.result()
-                results.append(invoice)
-                logger.info(f"[Upload] ✓ Procesado: {filename}")
+                # Ahora process_pdf devuelve una LISTA de InvoiceResult
+                page_results: List[InvoiceResult] = future.result()
+                results.extend(page_results)
+                logger.info(f"[Upload] ✓ Procesado: {filename} ({len(page_results)} facturas)")
             except Exception as exc:
                 logger.error(f"[Upload] ✗ Error al procesar {filename}: {exc}")
-                # Agregar un resultado de error para no perder el archivo en la UI
                 results.append(InvoiceResult(
                     filename=filename,
                     status="error",
                     error_detail=str(exc),
                 ))
 
-    # --- Lógica de Desduplicación Avanzada (QR o CUIT + Nro Factura) ---
+    # --- Lógica de Desduplicación Global (Cross-File) ---
     unique_results = []
     seen_qrs = set()
     seen_datos = set()
 
     for r in results:
+        # Si ya es un error, lo dejamos pasar para que el usuario lo vea
+        if r.status == "error":
+            unique_results.append(r)
+            continue
+
         is_duplicate = False
         
         # 1. Match Exacto por Link de QR
@@ -120,7 +123,7 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
             else:
                 seen_qrs.add(r.qr_link)
                 
-        # 2. Match por CUIT y Número (Incluso si uno vino del QR y el otro de la IA sin QR)
+        # 2. Match por CUIT y Número
         if not is_duplicate and r.cuit and r.numero is not None:
             key_datos = (str(r.cuit).strip(), r.numero)
             if key_datos in seen_datos:
@@ -129,16 +132,17 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
                 seen_datos.add(key_datos)
                 
         if is_duplicate:
-            logger.info(f"[Upload] ♻️ Ignorando archivo duplicado: {r.filename} (CUIT: {r.cuit}, Nro: {r.numero})")
+            logger.info(f"[Upload] ♻️ Ignorando duplicado global: {r.filename} (CUIT: {r.cuit}, Nro: {r.numero})")
             continue
             
         unique_results.append(r)
 
-    # Ordenar resultados por nombre de archivo para consistencia en la UI
+    # Ordenar resultados por nombre de archivo
     unique_results.sort(key=lambda r: r.filename)
 
-    logger.info(f"[Upload] Completado: {len(unique_results)} facturas únicas listas (de {len(file_data)} originales).")
+    logger.info(f"[Upload] Completado: {len(unique_results)} facturas únicas encontradas.")
     return unique_results
+
 
 
 # ---------------------------------------------------------------------------
