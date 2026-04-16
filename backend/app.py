@@ -49,17 +49,15 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 # CORS — Configuración para desarrollo local
 # ---------------------------------------------------------------------------
-# En producción, reemplazar ["*"] por el dominio real del frontend.
-CORS_ORIGINS = [
-    "http://localhost:5173",   # Vite dev server
-    "http://localhost:3000",   # Alternativa
-    "http://127.0.0.1:5173",
-]
+# En produccion, el frontend esta en Vercel (dominio variable).
+# Se usa allow_origins=["*"] para simplicidad — el acceso real lo
+# controla la autenticacion de Firebase en el frontend.
+CORS_ORIGINS = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=False,  # Debe ser False cuando allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -87,6 +85,37 @@ async def root():
 async def health_check():
     """Health check para monitoreo y load balancers."""
     return {"status": "healthy"}
+
+
+@app.get("/health/firebase", tags=["Sistema"])
+async def health_firebase():
+    """Diagnóstico de la conexión con Firebase Firestore."""
+    import os, json
+    import firebase_client
+
+    service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+    credentials_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json")
+
+    config_status = {
+        "env_var_present": bool(service_account_json),
+        "env_var_length": len(service_account_json) if service_account_json else 0,
+        "file_exists": __import__('os.path', fromlist=['exists']).exists(credentials_path),
+    }
+
+    if service_account_json:
+        try:
+            parsed = json.loads(service_account_json)
+            config_status["json_valid"] = True
+            config_status["project_id"] = parsed.get("project_id", "N/A")
+            config_status["client_email"] = parsed.get("client_email", "N/A")
+        except Exception as e:
+            config_status["json_valid"] = False
+            config_status["json_error"] = str(e)
+
+    db = firebase_client._init_firebase()
+    config_status["firestore_connected"] = db is not None
+
+    return config_status
 
 
 # ---------------------------------------------------------------------------
