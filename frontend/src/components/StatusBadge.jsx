@@ -62,9 +62,11 @@ export default function StatusBadge({ status }) {
   const Icon = config.icon;
 
   return (
-    <span className={`badge ${config.classes} whitespace-nowrap`}>
-      <Icon size={11} />
-      {config.label}
+    <span 
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${config.classes}`}
+      title={config.label}
+    >
+      <Icon size={14} />
     </span>
   );
 }

@@ -11,7 +11,7 @@
  * Cada botón muestra feedback visual "¡Copiado!" durante 2 segundos.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy, Check, ExternalLink, FileText, Building2, WifiOff, QrCode, Trash2
@@ -185,6 +185,13 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
     onUpdate(updatedFields);
   };
 
+  // Efecto inicial: Si es Factura A y no tiene IVA calculado, forzar 21%
+  useEffect(() => {
+    if (tipo_factura === "A" && total > 0 && (!iva || iva <= 0)) {
+      handleRecalculate(otros_tributos || 0, 0.21);
+    }
+  }, []);
+
   // Descripción para copiar (campo compuesto para ERP)
   const descripcion = [
     razon_social,
@@ -319,25 +326,27 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
             </ClickToCopyText>
           </td>
 
-          {/* IVA con Selector de Alícuota */}
+          {/* IVA con Selector Vertical */}
           <td className="px-4 py-3 whitespace-nowrap text-right">
-            <div className="flex flex-col items-end gap-1">
-              <span className="text-xs font-mono text-white font-bold">
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-xs font-mono text-white font-bold order-1 min-w-[70px]">
                 {formatARS(iva)}
               </span>
+              
               {tipo_factura === "A" && (
-                <div className="flex gap-1">
-                  {[0.21, 0.105, 0.27].map(rate => (
+                <div className="flex flex-col gap-0.5 order-2">
+                  {[0.27, 0.21, 0.105].map(rate => (
                     <button
                       key={rate}
                       onClick={() => handleRecalculate(otros_tributos, rate)}
-                      className={`text-[9px] px-1 rounded border ${
+                      title={`Calcular al ${(rate * 100).toFixed(1)}%`}
+                      className={`text-[8px] px-1 py-0 rounded border leading-tight ${
                         ivaRate === rate 
                           ? "bg-brand-500 border-brand-400 text-white" 
-                          : "bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300"
+                          : "bg-slate-800/80 border-slate-700 text-slate-500 hover:text-slate-300"
                       }`}
                     >
-                      {(rate * 100).toFixed(1)}%
+                      {(rate * 100).toFixed(0)}%
                     </button>
                   ))}
                 </div>
@@ -345,17 +354,21 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
             </div>
           </td>
 
-          {/* Otros / Ret (Editable) */}
+          {/* Otros / Ret (Editable + Botón Sugerido) */}
           <td className="px-4 py-3 whitespace-nowrap text-right">
             <div className="flex flex-col items-end gap-1">
-              <input
-                type="number"
-                step="0.01"
-                value={otros_tributos || 0}
-                onChange={(e) => handleRecalculate(e.target.value)}
-                className="w-20 bg-slate-900/50 border border-slate-700 rounded px-1.5 py-0.5 text-right text-xs font-mono text-brand-300 focus:border-brand-500 outline-none"
-              />
-              <span className="text-[9px] text-slate-600 uppercase">Manual</span>
+              <div className="flex items-center gap-1 bg-slate-900/50 border border-slate-700 rounded px-1.5 py-0.5 focus-within:border-brand-500 transition-colors">
+                <span className="text-brand-500 text-[10px] font-bold">+</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={otros_tributos || ""}
+                  onChange={(e) => handleRecalculate(e.target.value)}
+                  className="w-16 bg-transparent border-none text-right text-xs font-mono text-brand-300 outline-none p-0 appearance-none"
+                />
+              </div>
+              <span className="text-[8px] text-slate-600 uppercase font-bold tracking-tighter">Ret | Perc</span>
             </div>
           </td>
 
