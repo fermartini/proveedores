@@ -186,9 +186,10 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
     onUpdate(updatedFields);
   };
 
-  // Efecto inicial: Si es Factura A y no tiene IVA calculado, forzar 21%
+  // Efecto inicial: Si es Factura A, forzar cálculo al 21% de entrada para evitar inventos
   useEffect(() => {
-    if (tipo_factura === "A" && total > 0 && (!iva || iva <= 0)) {
+    if (tipo_factura === "A" && total > 0) {
+      // Forzamos el cálculo inicial al 21% para garantizar precisión
       handleRecalculate(otros_tributos || 0, 0.21);
     }
   }, []);
@@ -322,17 +323,21 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
 
           {/* NETO (Calculado) */}
           <td className="px-4 py-3 whitespace-nowrap text-right">
-            <span className="text-xs font-mono text-white font-medium">
-              {formatARS(importe_neto)}
-            </span>
+            <ClickToCopyText value={importe_neto?.toString()}>
+              <span className="text-xs font-mono text-white font-medium hover:text-brand-400 transition-colors">
+                {formatARS(importe_neto)}
+              </span>
+            </ClickToCopyText>
           </td>
 
           {/* IVA con Selector Vertical */}
           <td className="px-4 py-3 whitespace-nowrap text-right">
             <div className="flex items-center justify-end gap-2">
-              <span className="text-xs font-mono text-white font-bold order-1 min-w-[70px]">
-                {formatARS(iva)}
-              </span>
+              <ClickToCopyText value={iva?.toString()}>
+                <span className="text-xs font-mono text-white font-bold order-1 min-w-[70px] hover:text-brand-400 transition-colors">
+                  {formatARS(iva)}
+                </span>
+              </ClickToCopyText>
               
               {tipo_factura === "A" && (
                 <div className="flex flex-col gap-0.5 order-2">
@@ -466,7 +471,7 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
       <td className="px-4 py-3 text-center">
         <button
           onClick={onRemove}
-          className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors tooltip-trigger"
+          className="text-red-500/50 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors tooltip-trigger"
           title="Eliminar de la lista"
         >
           <Trash2 size={15} />
