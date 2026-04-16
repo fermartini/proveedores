@@ -109,9 +109,11 @@ def save_invoice(invoice_dict: dict) -> Optional[str]:
         return None
 
     try:
-        # Asegurar campos obligatorios del ERP
-        invoice_dict["autorizada"] = False
-        invoice_dict["pagada"] = False
+        # Mapear campos del payload al esquema de Firestore
+        # estado_autorizacion → autorizada (default True: las facturas llegan autorizadas por defecto)
+        # estado_pago        → pagada     (default False: aún no fueron abonadas)
+        invoice_dict["autorizada"] = invoice_dict.pop("estado_autorizacion", True)
+        invoice_dict["pagada"]     = invoice_dict.pop("estado_pago", False)
         invoice_dict["created_at"] = firestore.SERVER_TIMESTAMP
 
         # Agregar a la colección (Firestore genera el ID automáticamente)

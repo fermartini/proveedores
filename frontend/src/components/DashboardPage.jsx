@@ -55,24 +55,21 @@ function MiniStat({ icon, label, value, sub, color = "text-brand-400", bg = "bg-
 // ---------------------------------------------------------------------------
 // Toggle button para pagada / autorizada
 // ---------------------------------------------------------------------------
-function ToggleBtn({ value, label, onLabel, offLabel, onClick, disabled, color }) {
+function ToggleBtn({ value, onLabel, offLabel, onClick, disabled, onColor, offColor }) {
   const active = value === true;
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      title={active ? `Marcar como ${offLabel}` : `Marcar como ${onLabel}`}
+      title={active ? `Clic para: ${offLabel}` : `Clic para: ${onLabel}`}
       className={`
         inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
         border transition-all duration-200 select-none
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-105 active:scale-95"}
-        ${active
-          ? `${color.active} border-transparent`
-          : "bg-slate-700/50 text-slate-400 border-slate-600/50 hover:bg-slate-700"
-        }
+        ${active ? onColor : offColor}
       `}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-current" : "bg-slate-500"}`} />
+      <span className="w-1.5 h-1.5 rounded-full bg-current" />
       {active ? onLabel : offLabel}
     </button>
   );
@@ -142,10 +139,11 @@ function DashboardRow({ invoice, onToggle, isUpdating }) {
         <ToggleBtn
           value={invoice.autorizada}
           onLabel="Autorizada"
-          offLabel="Pendiente"
+          offLabel="No autorizada"
           onClick={() => onToggle(invoice.id, "autorizada", invoice.autorizada)}
           disabled={isDisabled}
-          color={{ active: "bg-violet-500/20 text-violet-300 border border-violet-500/40" }}
+          onColor="bg-violet-500/20 text-violet-300 border border-violet-500/40"
+          offColor="bg-red-500/15 text-red-400 border border-red-500/40 hover:bg-red-500/25"
         />
       </td>
 
@@ -154,10 +152,11 @@ function DashboardRow({ invoice, onToggle, isUpdating }) {
         <ToggleBtn
           value={invoice.pagada}
           onLabel="Pagada"
-          offLabel="Sin pagar"
+          offLabel="Recibida"
           onClick={() => onToggle(invoice.id, "pagada", invoice.pagada)}
           disabled={isDisabled}
-          color={{ active: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" }}
+          onColor="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+          offColor="bg-violet-500/15 text-violet-400 border border-violet-500/40 hover:bg-violet-500/25"
         />
       </td>
 
