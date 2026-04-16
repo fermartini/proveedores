@@ -25,10 +25,11 @@ const PAGE_SIZE = 50;
 const COLUMNS = [
   { key: "status",       label: "Estado",        sortable: false, align: "left"  },
   { key: "razon_social", label: "Proveedor",      sortable: true,  align: "left"  },
-  { key: "numero",       label: "Nro. Factura",   sortable: false, align: "left"  },
+  { key: "numero",       label: "Nro. Factura",   sortable: true,  align: "left"  },
   { key: "fecha",        label: "Fecha",          sortable: true,  align: "left"  },
   { key: "total",        label: "Total",          sortable: true,  align: "right" },
   { key: "cuenta",       label: "Cuenta",         sortable: false, align: "left"  },
+
   { key: "acciones",     label: "Copiar",         sortable: false, align: "center"},
   { key: "eliminar",     label: "Quitar",         sortable: false, align: "center"},
 ];

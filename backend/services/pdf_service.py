@@ -84,9 +84,9 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
     is_image = filename.lower().endswith((".jpg", ".jpeg", ".png"))
     results: List[InvoiceResult] = []
     
-    # Ducto de deduplicación interna por archivo
-    seen_qrs = set()
-    seen_invoices = set()
+    # Ducto de deduplicación interna: solo saltear si es idéntica a la ANTERIOR (consecutivos)
+    last_qr = None
+    last_key = None
 
     if is_image:
         # Caso Imagen: Una sola página
@@ -108,27 +108,28 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
             res = _process_single_page(filename, page_img, page_text)
             
             if res and res.status != "error":
-                # Lógica de deduplicación interna
                 is_duplicate = False
-                if res.qr_link and res.qr_link.lower().startswith("http"):
-                    if res.qr_link in seen_qrs:
-                        is_duplicate = True
-                    else:
-                        seen_qrs.add(res.qr_link)
                 
-                if not is_duplicate and res.cuit and res.numero:
-                    key = (str(res.cuit), res.numero)
-                    if key in seen_invoices:
-                        is_duplicate = True
-                    else:
-                        seen_invoices.add(key)
+                current_qr = res.qr_link if (res.qr_link and res.qr_link.lower().startswith("http")) else None
+                current_key = (str(res.cuit), res.numero) if (res.cuit and res.numero) else None
+
+                # Comparar solo con el anterior (Deduplicación de hojas consecutivas)
+                if current_qr and current_qr == last_qr:
+                    is_duplicate = True
+                elif current_key and current_key == last_key:
+                    is_duplicate = True
                 
+                # Actualizar punteros para la siguiente vuelta
+                last_qr = current_qr
+                last_key = current_key
+
                 if is_duplicate:
-                    logger.info(f"[PDF Service] Página {i+1} duplicada en {filename}, ignorando.")
+                    logger.info(f"[PDF Service] Página {i+1} es igual a la anterior en {filename}, ignorando.")
                     continue
             
             if res:
                 results.append(res)
+
 
     return results
 
