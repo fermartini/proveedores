@@ -110,7 +110,6 @@ export const useInvoices = () => {
 
 
     try {
-      const { confirmInvoices } = await import("../services/api");
       const result = await confirmInvoices(payloads);
       
       // Limpiar la tabla porque ya se enviaron con éxito a la nube
@@ -137,6 +136,12 @@ export const useInvoices = () => {
     setInvoices((prev) => prev.filter((inv) => inv.id !== id));
   }, []);
 
+  const updateInvoice = useCallback((id, updatedFields) => {
+    setInvoices((prev) =>
+      prev.map((inv) => (inv.id === id ? { ...inv, ...updatedFields } : inv))
+    );
+  }, []);
+
   // ---------------------------------------------------------------------------
   // Estadísticas derivadas
   // ---------------------------------------------------------------------------
@@ -158,5 +163,6 @@ export const useInvoices = () => {
     handleConfirm,
     clearError,
     removeInvoice,
+    updateInvoice,
   };
 };

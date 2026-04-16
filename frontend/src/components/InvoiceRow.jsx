@@ -154,12 +154,36 @@ const formatNumero = (pv, num) => {
  * @param {number} props.index   - Índice para animación escalonada.
  * @param {function} props.onRemove - Callback para eliminar la fila.
  */
-export default function InvoiceRow({ invoice, index, onRemove }) {
+export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
+  const [localInvoice, setLocalInvoice] = useState(invoice);
   const {
     filename, cuit, razon_social, tipo_factura, punto_venta, numero,
     fecha, importe_neto, iva, total, cae, qr_link, cuenta_contable,
-    autorizada, pagada, status, error_detail,
-  } = invoice;
+    autorizada, pagada, status, error_detail, otros_tributos, descripcion: iaDesc
+  } = localInvoice;
+
+  const [ivaRate, setIvaRate] = useState(0.21); // Default 21%
+
+  // Función para recalcular Neto e IVA basándose en Total y Retenciones
+  const handleRecalculate = (newOtros, newRate = ivaRate) => {
+    const valOtros = parseFloat(newOtros) || 0;
+    const currentTotal = total || 0;
+    
+    // Neto = (Total - Otros) / (1 + Rate)
+    const base = currentTotal - valOtros;
+    const newNeto = base / (1 + newRate);
+    const newIva = base - newNeto;
+
+    const updatedFields = {
+      importe_neto: Number(newNeto.toFixed(2)),
+      iva: Number(newIva.toFixed(2)),
+      otros_tributos: valOtros
+    };
+
+    setLocalInvoice(prev => ({ ...prev, ...updatedFields }));
+    setIvaRate(newRate);
+    onUpdate(updatedFields);
+  };
 
   // Descripción para copiar (campo compuesto para ERP)
   const descripcion = [
@@ -295,22 +319,44 @@ export default function InvoiceRow({ invoice, index, onRemove }) {
             </ClickToCopyText>
           </td>
 
-          {/* IVA */}
+          {/* IVA con Selector de Alícuota */}
           <td className="px-4 py-3 whitespace-nowrap text-right">
-            <ClickToCopyText value={iva?.toString()}>
-              <span className="text-xs font-mono text-slate-400 hover:text-brand-400 transition-colors">
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-xs font-mono text-white font-bold">
                 {formatARS(iva)}
               </span>
-            </ClickToCopyText>
+              {tipo_factura === "A" && (
+                <div className="flex gap-1">
+                  {[0.21, 0.105, 0.27].map(rate => (
+                    <button
+                      key={rate}
+                      onClick={() => handleRecalculate(otros_tributos, rate)}
+                      className={`text-[9px] px-1 rounded border ${
+                        ivaRate === rate 
+                          ? "bg-brand-500 border-brand-400 text-white" 
+                          : "bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300"
+                      }`}
+                    >
+                      {(rate * 100).toFixed(1)}%
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </td>
 
-          {/* Otros / Ret */}
+          {/* Otros / Ret (Editable) */}
           <td className="px-4 py-3 whitespace-nowrap text-right">
-            <ClickToCopyText value={invoice.otros_tributos?.toString()}>
-              <span className="text-xs font-mono text-slate-400 hover:text-brand-400 transition-colors">
-                {formatARS(invoice.otros_tributos)}
-              </span>
-            </ClickToCopyText>
+            <div className="flex flex-col items-end gap-1">
+              <input
+                type="number"
+                step="0.01"
+                value={otros_tributos || 0}
+                onChange={(e) => handleRecalculate(e.target.value)}
+                className="w-20 bg-slate-900/50 border border-slate-700 rounded px-1.5 py-0.5 text-right text-xs font-mono text-brand-300 focus:border-brand-500 outline-none"
+              />
+              <span className="text-[9px] text-slate-600 uppercase">Manual</span>
+            </div>
           </td>
 
           {/* Total */}

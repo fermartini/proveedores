@@ -39,6 +39,7 @@ export default function App() {
     handleConfirm,
     clearError,
     removeInvoice,
+    updateInvoice,
   } = useInvoices();
 
   const formatARSShort = (v) => {
@@ -160,6 +161,7 @@ export default function App() {
                   onConfirm={handleConfirm}
                   isConfirming={uploading}
                   onRemove={removeInvoice}
+                  onUpdate={updateInvoice}
                 />
               </section>
 

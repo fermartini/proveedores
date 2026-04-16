@@ -52,7 +52,7 @@ function SortIcon({ column, sortKey, sortDir }) {
  * @param {boolean}  props.isConfirming - Estado de guardado.
  * @param {Function} props.onRemove - Callback para eliminar factura.
  */
-export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemove }) {
+export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemove, onUpdate }) {
   const [search, setSearch]     = useState("");
   const [sortKey, setSortKey]   = useState("fecha");
   const [sortDir, setSortDir]   = useState("desc");
@@ -211,6 +211,7 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
                     invoice={invoice}
                     index={idx}
                     onRemove={() => onRemove(invoice.id)}
+                    onUpdate={(data) => onUpdate(invoice.id, data)}
                   />
 
                 ))
