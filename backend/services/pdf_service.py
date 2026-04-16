@@ -17,6 +17,7 @@ import base64
 import json
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
+from typing import List, Optional
 
 from models.invoice import InvoiceResult
 from services import qr_service, parser_service, llm_service
