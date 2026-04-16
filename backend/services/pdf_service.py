@@ -340,6 +340,7 @@ def _process_single_page(
         es_credito=es_credito,
         cae=parsed_fields.get("cae"),
         qr_link=qr_url,
+        descripcion=parsed_fields.get("descripcion"),
         status=status,
         error_detail=error_detail,
         created_at=datetime.utcnow().isoformat(),

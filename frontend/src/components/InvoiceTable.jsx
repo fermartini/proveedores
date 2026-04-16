@@ -26,6 +26,7 @@ const COLUMNS = [
   { key: "status",       label: "Estado",        sortable: false, align: "left"  },
   { key: "razon_social", label: "Proveedor",      sortable: true,  align: "left"  },
   { key: "numero",       label: "Nro. Factura",   sortable: true,  align: "left"  },
+  { key: "descripcion",  label: "Conceptos",      sortable: false, align: "left"  },
   { key: "fecha",        label: "Fecha",          sortable: true,  align: "left"  },
   { key: "iva",          label: "IVA",            sortable: true,  align: "right" },
   { key: "otros",        label: "Otros / Ret",    sortable: true,  align: "right" },

@@ -26,35 +26,35 @@ logger = logging.getLogger(__name__)
 
 # Prompt diseñado para extraer datos de facturas argentinas de forma estructurada
 EXTRACTION_PROMPT = """Analizá esta imagen de una factura argentina. 
-Extraé la siguiente información y devolvé ÚNICAMENTE un objeto JSON válido, sin Markdown, 
-sin bloques de código, sin texto antes ni después del JSON:
+Extraé la siguiente información y devolvé ÚNICAMENTE un objeto JSON válido.
 
+CAMPOS A EXTRAER:
 {
   "cuit_emisor": "string o null",
   "razon_social": "string o null",
-  "punto_venta": "número entero o null",
-  "numero_comprobante": "número entero o null",
-  "fecha_emision": "string en formato DD/MM/AAAA o null",
-  "importe_neto": "número decimal o null",
-  "iva": "número decimal o null",
-  "otros_tributos": "número decimal o null",
-  "total": "número decimal o null",
+  "punto_venta": número entero o null,
+  "numero_comprobante": número entero o null,
+  "fecha_emision": "DD/MM/AAAA o null",
+  "importe_neto": número decimal o null (Base Imponible),
+  "iva": número decimal o null (Suma de todos los IVAs),
+  "otros_tributos": número decimal o null (Percepciones de IIBB, IVA, etc),
+  "total": número decimal o null (Importe Total final),
   "moneda": "ARS o USD",
-  "cotizacion": "número decimal o null (Tipo de cambio si es USD)",
+  "cotizacion": número decimal (Tipo de cambio si es USD, sino 1.0),
   "cae": "string o null",
   "tipo_factura": "A, B o C o null",
   "cuit_receptor": "string o null",
+  "descripcion_breve": "Resumen de lo comprado (ej: 'Resmas de papel', 'Service de generador')",
   "url_qr_afip": "URL completa si la ves o null"
 }
 
-Reglas:
-- El CUIT Emisor es un número de 11 dígitos que aparece en el encabezado de la factura.
-- El CUIT Receptor es a nombre de quien sale la factura (receptor).
-- El CAE es un número de 14 dígitos que aparece generalmente al pie de la factura.
-- El total es el importe TOTAL final de la factura.
-- Si moneda es USD, buscá el "Tipo de Cambio" o "Cotización" para completar el campo cotizacion.
-- No inventes datos. Solo extraé lo que esté claramente visible en la imagen.
-
+REGLAS DE PRECISIÓN (MUY IMPORTANTE):
+1. REGLA ARITMÉTICA: Aseguráte que (importe_neto + iva + otros_tributos) == total. 
+   - Si no coincide, revisá si hay "Percepciones" o "Conceptos No Gravados" y sumalos en 'otros_tributos'.
+2. FACTURAS TIPO C: El IVA siempre es 0. El 'importe_neto' suele coincidir con el 'total'.
+3. FACTURAS TIPO A: El 'importe_neto' es el subtotal antes de impuestos. El 'iva' es la suma de alícuotas (21%, 10.5%).
+4. NO INVENTES: Solo extraé lo que esté visible. Si algo no suma, priorizá el 'total' y ajustá los otros campos según lo que veas.
+5. DESCRIPCIÓN: Mirá la tabla de items y hacé un resumen muy corto de lo que se está facturando.
 """
 
 
@@ -243,6 +243,9 @@ def normalizar_datos_llm(llm_data: dict) -> dict:
 
     if llm_data.get("cuit_receptor"):
         normalized["cuit_receptor"] = str(llm_data["cuit_receptor"]).replace("-", "").replace(".", "").strip()
+
+    if llm_data.get("descripcion_breve"):
+        normalized["descripcion"] = str(llm_data["descripcion_breve"]).strip()
 
     return normalized
 

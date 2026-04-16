@@ -50,6 +50,7 @@ class InvoiceResult(BaseModel):
     # --- Autorización AFIP ---
     cae: Optional[str] = Field(None, description="Código de Autorización Electrónica (CAE)")
     qr_link: Optional[str] = Field(None, description="URL del QR con dominio afip.gob.ar corregido")
+    descripcion: Optional[str] = Field(None, description="Resumen de los conceptos facturados extraído por IA")
 
     # --- Campos contables (defaults ERP) ---
     cuenta_contable: str = Field(
@@ -95,6 +96,7 @@ class InvoiceDBPayload(BaseModel):
     otros_tributos: Optional[float] = Field(None)
     cae: Optional[str] = Field(None)
     url_qr_afip: Optional[str] = Field(None)
+    descripcion: Optional[str] = Field(None)
     cuenta_contable_sugerida: str = Field("Muebles y Útiles")
     estado_autorizacion: bool = Field(True)
     estado_pago: bool = Field(False)

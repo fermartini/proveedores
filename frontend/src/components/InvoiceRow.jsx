@@ -266,6 +266,13 @@ export default function InvoiceRow({ invoice, index, onRemove }) {
         </div>
       </td>
 
+      {/* Conceptos (Descripción) */}
+      <td className="px-4 py-3 min-w-[150px] max-w-[250px]">
+        <p className="text-xs text-slate-400 truncate group-hover:whitespace-normal transition-all duration-300" title={invoice.descripcion}>
+          {invoice.descripcion ?? <span className="text-slate-700 italic">Sin descripción</span>}
+        </p>
+      </td>
+
       {isInvalidReceptor ? (
         // MODO ULTRA ROJO: Aviso gigante ocultando el resto de las celdas de datos (excepto eliminar)
         <td colSpan={6} className="px-4 py-3 text-center">
