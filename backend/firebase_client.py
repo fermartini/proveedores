@@ -126,6 +126,29 @@ def save_invoice(invoice_dict: dict) -> Optional[str]:
         return None
 
 
+def _serialize_doc(doc_dict: dict) -> dict:
+    """
+    Convierte tipos no serializables de Firestore (DatetimeWithNanoseconds, etc.)
+    a tipos primitivos compatibles con JSON.
+    """
+    result = {}
+    for key, value in doc_dict.items():
+        if hasattr(value, "isoformat"):
+            # DatetimeWithNanoseconds, datetime, date → ISO string
+            result[key] = value.isoformat()
+        elif isinstance(value, dict):
+            result[key] = _serialize_doc(value)
+        elif isinstance(value, list):
+            result[key] = [
+                _serialize_doc(v) if isinstance(v, dict)
+                else (v.isoformat() if hasattr(v, "isoformat") else v)
+                for v in value
+            ]
+        else:
+            result[key] = value
+    return result
+
+
 def get_all_invoices() -> list:
     """
     Obtiene todas las facturas de Firestore ordenadas por fecha de creación.
@@ -143,11 +166,12 @@ def get_all_invoices() -> list:
             .order_by("created_at", direction=firestore.Query.DESCENDING)
             .stream()
         )
-        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        return [{"id": doc.id, **_serialize_doc(doc.to_dict())} for doc in docs]
 
     except Exception as exc:
         logger.error(f"[Firebase] Error al obtener facturas: {exc}")
         return []
+
 
 
 def update_invoice_field(doc_id: str, field: str, value) -> bool:
