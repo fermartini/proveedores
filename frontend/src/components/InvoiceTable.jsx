@@ -1,24 +1,18 @@
 /**
  * components/InvoiceTable.jsx
  * ---------------------------
- * Tabla elegante de facturas procesadas con búsqueda, ordenamiento y estado vacío.
- *
- * Características:
- *   - Búsqueda en tiempo real por Razón Social, CUIT o número de factura.
- *   - Ordenamiento por columna (click en header).
- *   - Paginación (10 registros por página).
- *   - Estado vacío con ilustración.
- *   - Totales en el footer.
- *   - Scroll horizontal en pantallas pequeñas.
+ * Tabla elegante de facturas procesadas con búsqueda, ordenamiento y descarga ZIP.
  */
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import JSZip from "jszip";
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
-  FileX, ChevronLeft, ChevronRight,
+  FileX, ChevronLeft, ChevronRight, Archive, CheckCircle2
 } from "lucide-react";
 import InvoiceRow from "./InvoiceRow";
+import { useInvoiceContext } from "../context/InvoiceContext";
 
 const PAGE_SIZE = 50;
 
@@ -36,8 +30,6 @@ const COLUMNS = [
   { key: "eliminar",     label: "Quitar",         sortable: false, align: "center"},
 ];
 
-
-// Ícono de ordenamiento
 function SortIcon({ column, sortKey, sortDir }) {
   if (sortKey !== column) return <ChevronsUpDown size={12} className="text-slate-600" />;
   return sortDir === "asc"
@@ -45,18 +37,13 @@ function SortIcon({ column, sortKey, sortDir }) {
     : <ChevronDown size={12} className="text-brand-400" />;
 }
 
-/**
- * @param {object}   props
- * @param {object[]} props.invoices - Lista de facturas.
- * @param {Function} props.onConfirm - Callback para confirmar.
- * @param {boolean}  props.isConfirming - Estado de guardado.
- * @param {Function} props.onRemove - Callback para eliminar factura.
- */
 export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemove, onUpdate }) {
+  const { fileMap } = useInvoiceContext();
   const [search, setSearch]     = useState("");
   const [sortKey, setSortKey]   = useState("fecha");
   const [sortDir, setSortDir]   = useState("desc");
   const [page, setPage]         = useState(1);
+  const [isZipping, setIsZipping] = useState(false);
 
   // ---- Búsqueda y filtrado ----
   const filtered = useMemo(() => {
@@ -75,13 +62,8 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
     return [...filtered].sort((a, b) => {
       const aVal = a[sortKey] ?? "";
       const bVal = b[sortKey] ?? "";
-      
       if (typeof aVal === "string" || typeof bVal === "string") {
-        const aStr = String(aVal);
-        const bStr = String(bVal);
-        return sortDir === "asc"
-          ? aStr.localeCompare(bStr)
-          : bStr.localeCompare(aStr);
+        return sortDir === "asc" ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
       }
       return sortDir === "asc" ? aVal - bVal : bVal - aVal;
     });
@@ -92,79 +74,82 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
   const paginated  = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleSort = (key) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
     setPage(1);
   };
 
-  // ---- Manejo del Botón Confirmar ----
+  // ---- Descarga en Lote (ZIP) ----
+  const handleDownloadZip = async () => {
+    if (invoices.length === 0) return;
+    setIsZipping(true);
+    const zip = new JSZip();
+
+    try {
+      const promises = invoices.map(async (inv) => {
+        const blobUrl = fileMap[inv.id];
+        if (!blobUrl) return;
+
+        try {
+          const response = await fetch(blobUrl);
+          const blob = await response.blob();
+          
+          const pv = String(inv.punto_venta ?? "0").padStart(4, "0");
+          const nro = String(inv.numero ?? "0").padStart(8, "0");
+          const cleanName = (inv.razon_social ?? "PROVEEDOR")
+            .replace(/[/\\?%*:|"<>]/g, "-") // Sanitizar
+            .toUpperCase();
+          
+          const fileName = `${cleanName}_${pv}-${nro}.pdf`;
+          zip.file(fileName, blob);
+        } catch (e) {
+          console.error(`Error al procesar ${inv.filename}:`, e);
+        }
+      });
+
+      await Promise.all(promises);
+      const content = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = `Lote_Facturas_${new Date().toISOString().split('T')[0]}.zip`;
+      link.click();
+    } catch (err) {
+      alert("Error al generar el ZIP");
+    } finally {
+      setIsZipping(false);
+    }
+  };
+
   const handleConfirmClick = () => {
     const errorCount = invoices.filter(i => i.status !== "procesado").length;
-    
     if (errorCount > 0) {
-      const excludeErrors = window.confirm(
-        `Se detectaron ${errorCount} facturas con advertencias o errores.\n\n` +
-        `¿Deseas excluir las facturas erróneas y enviar SOLO las facturas válidas?\n\n` +
-        `- [Aceptar]: Envía solo las procesadas.\n` +
-        `- [Cancelar]: Quiero forzar el envío de todas o abortar.`
-      );
-      
-      if (excludeErrors) {
-        onConfirm("valid_only");
-      } else {
-        const forceAll = window.confirm(
-          `¿Deseas forzar el envío de TODAS las facturas a la Base de Datos, incluso si tienen campos rotos o vacíos?\n\n` +
-          `- [Aceptar]: Sí, enviar todo (incluir errores).\n` +
-          `- [Cancelar]: Abortar y no enviar nada.`
-        );
-        if (forceAll) {
-          onConfirm("all");
-        }
-      }
+      const exclude = window.confirm(`Hay ${errorCount} facturas con errores. ¿Enviar solo las válidas?`);
+      if (exclude) onConfirm("valid_only");
+      else if (window.confirm("¿Forzar envío de TODAS (incluyendo errores)?")) onConfirm("all");
     } else {
-      // Todo procesado perfectamente
       onConfirm("valid_only");
     }
   };
 
-  // ---- Totales footer ----
   const totals = useMemo(() => ({
     total: filtered.reduce((s, i) => s + (i.total ?? 0), 0),
   }), [filtered]);
 
-  const formatARS = (v) =>
-    new Intl.NumberFormat("es-AR", {
-      style: "currency", currency: "ARS", minimumFractionDigits: 2,
-    }).format(v);
+  const formatARS = (v) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 }).format(v);
 
-  // ---- Render ----
   return (
     <div className="glass-card overflow-hidden">
-
-      {/* ---- Header de la tabla / buscador ---- */}
       <div className="px-6 py-4 border-b border-slate-700/50 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <div>
-          <h2 className="text-base font-semibold text-white">
-            Facturas procesadas
-          </h2>
+          <h2 className="text-base font-semibold text-white">Facturas procesadas</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            {invoices.length} registro{invoices.length !== 1 ? "s" : ""} en total
-            {filtered.length !== invoices.length && ` · ${filtered.length} filtradas`}
+            {invoices.length} registro{invoices.length !== 1 ? "s" : ""} · {filtered.length} filtrados
           </p>
         </div>
 
-        {/* Buscador */}
         <div className="relative w-full sm:w-64">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
-          />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
           <input
-            id="invoice-search-input"
             type="text"
             placeholder="Buscar proveedor, CUIT..."
             value={search}
@@ -174,88 +159,40 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
         </div>
       </div>
 
-      {/* ---- Tabla ---- */}
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-700/50 bg-slate-800/30">
               {COLUMNS.map((col) => (
-                <th
-                  key={col.key}
-                  onClick={() => col.sortable && handleSort(col.key)}
-                  className={`
-                    px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500
-                    ${col.align === "right" ? "text-right" : ""}
-                    ${col.align === "center" ? "text-center" : ""}
-                    ${col.sortable ? "cursor-pointer hover:text-slate-300 select-none" : ""}
-                    transition-colors duration-150
-                  `}
-                >
+                <th key={col.key} onClick={() => col.sortable && handleSort(col.key)} className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 ${col.align === "right" ? "text-right" : ""} ${col.align === "center" ? "text-center" : ""} ${col.sortable ? "cursor-pointer hover:text-slate-300" : ""}`}>
                   <span className="inline-flex items-center gap-1">
                     {col.label}
-                    {col.sortable && (
-                      <SortIcon column={col.key} sortKey={sortKey} sortDir={sortDir} />
-                    )}
+                    {col.sortable && <SortIcon column={col.key} sortKey={sortKey} sortDir={sortDir} />}
                   </span>
                 </th>
               ))}
             </tr>
           </thead>
-
           <tbody>
             <AnimatePresence mode="popLayout">
               {paginated.length > 0 ? (
                 paginated.map((invoice, idx) => (
-                  <InvoiceRow
-                    key={invoice.id}
-                    invoice={invoice}
-                    index={idx}
-                    onRemove={() => onRemove(invoice.id)}
-                    onUpdate={(data) => onUpdate(invoice.id, data)}
-                  />
-
+                  <InvoiceRow key={invoice.id} invoice={invoice} index={idx} onRemove={() => onRemove(invoice.id)} onUpdate={(data) => onUpdate(invoice.id, data)} />
                 ))
               ) : (
-                /* Estado vacío */
-                <motion.tr
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <td colSpan={COLUMNS.length} className="px-4 py-20 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-800/60 flex items-center justify-center">
-                        <FileX size={24} className="text-slate-600" />
-                      </div>
-                      <p className="text-sm font-medium text-slate-500">
-                        {search
-                          ? `Sin resultados para "${search}"`
-                          : "Aún no hay facturas procesadas"
-                        }
-                      </p>
-                      {!search && (
-                        <p className="text-xs text-slate-600">
-                          Arrastrá tus PDFs a la zona de carga para comenzar
-                        </p>
-                      )}
-                    </div>
+                <motion.tr key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <td colSpan={COLUMNS.length} className="px-4 py-20 text-center text-slate-500">
+                    {search ? "Sin resultados" : "No hay facturas procesadas"}
                   </td>
                 </motion.tr>
               )}
             </AnimatePresence>
           </tbody>
-
-          {/* ---- Footer con totales ---- */}
           {filtered.length > 0 && (
             <tfoot>
               <tr className="border-t border-slate-700/50 bg-slate-800/30">
-                <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Totales ({filtered.length} facturas)
-                </td>
-                <td className="px-4 py-3 text-right text-xs font-bold text-brand-400 font-mono">
-                  {formatARS(totals.total)}
-                </td>
+                <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-slate-400">TOTALES ({filtered.length})</td>
+                <td className="px-4 py-3 text-right text-xs font-bold text-brand-400 font-mono">{formatARS(totals.total)}</td>
                 <td colSpan={3} />
               </tr>
             </tfoot>
@@ -263,55 +200,29 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
         </table>
       </div>
 
-      {/* ---- Paginación y Acciones ---- */}
-      {(totalPages > 1 || invoices.length > 0) && (
-        <div className="px-6 py-4 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-4">
-          
-          {totalPages > 1 ? (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="btn-ghost px-2 py-1 disabled:opacity-40"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => Math.abs(p - page) <= 2)
-                .map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                      p === page
-                        ? "bg-brand-600 text-white"
-                        : "text-slate-400 hover:bg-slate-700 hover:text-white"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="btn-ghost px-2 py-1 disabled:opacity-40"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          ) : <div />}
-
-          <div className="flex justify-end ml-auto">
-            <button
-              onClick={handleConfirmClick}
-              disabled={isConfirming || invoices.length === 0}
-              className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-brand-500/20"
-            >
-              {isConfirming ? "Guardando en DB..." : "Confirmar a Base de Datos"}
-            </button>
-          </div>
+      <div className="px-6 py-4 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex gap-2">
+          <button
+            onClick={handleDownloadZip}
+            disabled={isZipping || invoices.length === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white text-sm font-bold transition-all disabled:opacity-50"
+          >
+            <Archive size={16} className={isZipping ? "animate-pulse" : ""} />
+            {isZipping ? "Generando ZIP..." : "Bajar LOTE (ZIP Renombrado)"}
+          </button>
         </div>
-      )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleConfirmClick}
+            disabled={isConfirming || invoices.length === 0}
+            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-lg shadow-brand-500/20"
+          >
+            <CheckCircle2 size={16} />
+            {isConfirming ? "Guardando en DB..." : "Confirmar a Base de Datos"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

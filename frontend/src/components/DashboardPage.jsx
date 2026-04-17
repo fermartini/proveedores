@@ -319,6 +319,7 @@ export default function DashboardPage() {
   } = useDashboard();
 
   const [search, setSearch]       = useState("");
+  const [amountSearch, setAmountSearch] = useState("");
   const [filter, setFilter]       = useState("all");
   const [sortKey, setSortKey]     = useState("created_at");
   const [sortDir, setSortDir]     = useState("desc");
@@ -350,6 +351,7 @@ export default function DashboardPage() {
     if (filter === "pagada")     list = list.filter((i) => i.pagada);
     if (filter === "autorizada") list = list.filter((i) => i.autorizada);
 
+    // Búsqueda de texto
     const q = search.toLowerCase().trim();
     if (q) {
       list = list.filter((i) =>
@@ -359,8 +361,18 @@ export default function DashboardPage() {
         (i.fecha_emision ?? "").includes(q)
       );
     }
+
+    // Búsqueda de Importe
+    const am = amountSearch.trim();
+    if (am) {
+      list = list.filter((i) => {
+        const totalStr = String(i.total ?? "");
+        return totalStr.includes(am);
+      });
+    }
+
     return list;
-  }, [invoices, filter, search, viewMode, displayDate]);
+  }, [invoices, filter, search, amountSearch, viewMode, displayDate]);
 
   // 2. Ordenamiento
   const sorted = useMemo(() => {
@@ -568,17 +580,31 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Buscador */}
-        <div className="relative w-full sm:w-64 sm:ml-auto">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-          <input
-            id="dashboard-search"
-            type="text"
-            placeholder="Buscar proveedor, CUIT..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="input-base pl-8 w-full text-sm"
-          />
+        {/* Buscadores */}
+        <div className="flex gap-2 w-full sm:w-auto ml-auto">
+          <div className="relative w-full sm:w-64">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <input
+              id="dashboard-search"
+              type="text"
+              placeholder="Buscar proveedor, CUIT..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="input-base pl-8 w-full text-sm"
+            />
+          </div>
+
+          <div className="relative w-full sm:w-40">
+            <DollarSign size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <input
+              id="dashboard-amount-search"
+              type="text"
+              placeholder="Monto..."
+              value={amountSearch}
+              onChange={(e) => { setAmountSearch(e.target.value); setPage(1); }}
+              className="input-base pl-8 w-full text-sm"
+            />
+          </div>
         </div>
       </div>
 
