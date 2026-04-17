@@ -55,6 +55,7 @@ REGLAS DE PRECISIÓN (MUY IMPORTANTE):
 3. FACTURAS TIPO A: El 'importe_neto' es el subtotal antes de impuestos. El 'iva' es la suma de alícuotas (21%, 10.5%).
 4. NO INVENTES: Solo extraé lo que esté visible. Si algo no suma, priorizá el 'total' y ajustá los otros campos según lo que veas.
 5. DESCRIPCIÓN: Mirá la tabla de items y hacé un resumen muy corto de lo que se está facturando.
+6. RAZÓN SOCIAL: Extraé ÚNICAMENTE el nombre de la persona o empresa. NO incluyas textos de etiquetas cercanas como "Fecha de Emisión", "Punto de Venta", "CUIT", etc.
 """
 
 
@@ -179,7 +180,10 @@ def normalizar_datos_llm(llm_data: dict) -> dict:
         normalized["cuit"] = str(llm_data["cuit_emisor"]).replace("-", "").replace(".", "").strip()
 
     if llm_data.get("razon_social"):
-        normalized["razon_social"] = str(llm_data["razon_social"]).strip()
+        val = str(llm_data["razon_social"]).strip()
+        # Limpiar ruidos comunes si se filtraron (cortar en la primera etiqueta conocida)
+        val = re.split(r"(?i)\s+(fecha|punto|número|cuit|domicilio|condición|iva)", val)[0].strip()
+        normalized["razon_social"] = val
 
     if llm_data.get("punto_venta") is not None:
         try:
