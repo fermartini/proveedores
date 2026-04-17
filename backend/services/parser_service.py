@@ -232,20 +232,24 @@ def _parse_cuit(text: str) -> Optional[str]:
 def _parse_razon_social(text: str) -> Optional[str]:
     """
     Extrae la razón social del emisor.
-    Estrategia: buscar la línea siguiente a "Razón Social" o usar
-    el nombre que aparece en el encabezado de la factura.
+    Estrategia: buscar la frase y capturar hasta el próximo delimitador conocido.
     """
+    # Lista de etiquetas que suelen venir después del nombre en la misma línea
+    delimiters = r"Fecha|Punto|Nro|N[º°]|CUIT|C\.U\.I\.T|Domicilio|Condici[oó]n|IVA|Pág"
+    
     patterns = [
-        r"Raz[oó]n\s+Social\s*[:\-]?\s*(.+?)(?:\n|CUIT|C\.U\.I\.T|$)",
-        r"Nombre\s+y\s+Apellido\s*[:\-]?\s*(.+?)(?:\n|CUIT|$)",
+        r"Raz[oó]n\s+Social\s*[:\-]?\s*(.+?)(?:\n|" + delimiters + r"|$)",
+        r"Nombre\s+y\s+Apellido\s*[:\-]?\s*(.+?)(?:\n|" + delimiters + r"|$)",
     ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             name = match.group(1).strip()
-            # Limpiar caracteres extra
+            # Limpiar ruidos residuales (doble espacio, etc.)
             name = re.sub(r"\s+", " ", name)
-            if len(name) > 2:  # Evitar capturas vacías
+            # Limpieza extra por si el regex capturó la etiqueta (case-insensitive)
+            name = re.split(r"(?i)\s+(fecha|punto|nro|n[º°]|cuit|domicilio|condición|iva|pág)", name)[0].strip()
+            if len(name) > 2:
                 return name
     return None
 
