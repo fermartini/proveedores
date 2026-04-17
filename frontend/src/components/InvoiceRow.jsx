@@ -14,9 +14,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Copy, Check, ExternalLink, FileText, Building2, WifiOff, QrCode, Trash2
+  Copy, Check, ExternalLink, FileText, Building2, WifiOff, QrCode, Trash2, Eye
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import StatusBadge from "./StatusBadge";
+import { useInvoiceContext } from "../context/InvoiceContext";
 
 // Valores sentinel del QR que vienen del backend
 const QR_NO_TIENE          = "NO TIENE";
@@ -155,13 +157,38 @@ const formatNumero = (pv, num) => {
  * @param {function} props.onRemove - Callback para eliminar la fila.
  */
 export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
+  const navigate = useNavigate();
+  const { dashboardInvoices } = useInvoiceContext();
   const [localInvoice, setLocalInvoice] = useState(invoice);
+
+  // --- Lógica de Memoria de Cuentas (Sugerencia) ---
+  useEffect(() => {
+    if (!invoice.cuenta_contable && invoice.cuit && dashboardInvoices.length > 0) {
+      // Buscar la última factura de este CUIT
+      const matches = dashboardInvoices
+        .filter(inv => String(inv.cuit_emisor) === String(invoice.cuit))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      if (matches.length > 0 && matches[0].cuenta_contable) {
+        const suggestion = matches[0].cuenta_contable;
+        setLocalInvoice(prev => ({ ...prev, cuenta_contable: suggestion }));
+        onUpdate({ cuenta_contable: suggestion });
+      }
+    }
+  }, [invoice.cuit, dashboardInvoices, invoice.cuenta_contable]);
+
   const [showRetInput, setShowRetInput] = useState(false);
   const {
     filename, cuit, razon_social, tipo_factura, punto_venta, numero,
     fecha, importe_neto, iva, total, cae, qr_link, cuenta_contable,
     autorizada, pagada, status, error_detail, otros_tributos, descripcion: iaDesc
   } = localInvoice;
+
+  // --- Lógica de Detección de Duplicados ---
+  const isDuplicateInDB = dashboardInvoices.some(inv => 
+    String(inv.cuit_emisor) === String(cuit) && 
+    String(inv.numero_comprobante) === String(numero)
+  );
 
   const [ivaRate, setIvaRate] = useState(0.21); // Default 21%
 
@@ -194,6 +221,12 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
     }
   }, []);
 
+  const handleTogglePago = () => {
+    const newPagada = !localInvoice.pagada;
+    setLocalInvoice((prev) => ({ ...prev, pagada: newPagada }));
+    onUpdate({ pagada: newPagada });
+  };
+
   // Descripción para copiar (campo compuesto para ERP)
   const descripcion = [
     razon_social,
@@ -216,9 +249,12 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
   
   const rowClass = isInvalidReceptor
     ? "bg-red-600/90 hover:bg-red-700 transition-all duration-300"
-    : (invoice.es_credito 
-        ? "bg-violet-500/10 hover:bg-violet-500/20" 
-        : (invoice.moneda === "USD" ? "bg-blue-500/10 hover:bg-blue-500/20" : "hover:bg-slate-800/30")
+    : (pagada 
+        ? "bg-emerald-500/10 hover:bg-emerald-600/15 border-l-4 border-l-emerald-500" 
+        : (invoice.es_credito 
+            ? "bg-violet-500/10 hover:bg-violet-500/20 shadow-inner" 
+            : (invoice.moneda === "USD" ? "bg-blue-500/10 hover:bg-blue-500/20 shadow-inner" : "hover:bg-slate-800/30")
+          )
       );
 
 
@@ -231,16 +267,30 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
     >
       {/* Estado */}
       <td className="px-4 py-3 whitespace-nowrap">
-        <StatusBadge status={status} />
+        <StatusBadge 
+          status={status} 
+          onClick={status === "procesado" || status === "sin_qr" ? handleTogglePago : null} 
+        />
       </td>
 
       {/* Razón Social + CUIT */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            isInvalidReceptor ? "bg-white/20" : (invoice.es_credito ? "bg-violet-500/20" : (invoice.moneda === "USD" ? "bg-blue-500/20" : "bg-slate-700/60"))
-          }`}>
-            <Building2 size={13} className={isInvalidReceptor ? "text-white" : (invoice.es_credito ? "text-violet-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-slate-400"))} />
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => navigate(`/factura/${invoice.id}/verificacion`)}
+              title="Abrir vista de verificación dividida"
+              className={`p-1.5 rounded-lg transition-all hover:scale-110 active:scale-95 ${
+                isInvalidReceptor ? "bg-white/20 text-white" : "bg-brand-500/10 text-brand-400 hover:bg-brand-500 hover:text-white"
+              }`}
+            >
+              <Eye size={14} />
+            </button>
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+              isInvalidReceptor ? "bg-white/20" : (invoice.es_credito ? "bg-violet-500/20" : (invoice.moneda === "USD" ? "bg-blue-500/20" : "bg-slate-700/60"))
+            }`}>
+              <Building2 size={13} className={isInvalidReceptor ? "text-white" : (invoice.es_credito ? "text-violet-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-slate-400"))} />
+            </div>
           </div>
           <div className="min-w-0">
             {isErrorRow || isInvalidReceptor ? (
@@ -269,6 +319,12 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
                   <p className="text-[11px] text-slate-500 font-mono mt-0.5">
                     {cuit.replace(/(\d{2})(\d{8})(\d)/, "$1-$2-$3")}
                   </p>
+                )}
+                
+                {isDuplicateInDB && (
+                  <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-[9px] font-black text-red-400 uppercase tracking-tighter animate-pulse">
+                    ⚠️ YA REGISTRADA EN DB
+                  </div>
                 )}
               </>
             )}

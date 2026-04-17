@@ -54,17 +54,23 @@ const STATUS_CONFIG = {
 };
 
 /**
- * @param {object} props
- * @param {string} props.status - Estado de la factura.
+ * @param {object}   props
+ * @param {string}   props.status  - Estado de la factura.
+ * @param {function} [props.onClick] - Callback opcional para cuando se hace click en el badge.
  */
-export default function StatusBadge({ status }) {
+export default function StatusBadge({ status, onClick }) {
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.pendiente;
   const Icon = config.icon;
 
   return (
     <span 
-      className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${config.classes}`}
-      title={config.label}
+      onClick={onClick}
+      className={`
+        inline-flex items-center justify-center w-7 h-7 rounded-full transition-all duration-200
+        ${config.classes}
+        ${onClick ? "cursor-pointer hover:scale-110 active:scale-95 shadow-lg shadow-emerald-500/10" : ""}
+      `}
+      title={onClick ? `Clic para cambiar estado: ${config.label}` : config.label}
     >
       <Icon size={14} />
     </span>

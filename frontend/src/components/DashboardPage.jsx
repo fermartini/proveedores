@@ -1,35 +1,22 @@
-/**
- * components/DashboardPage.jsx
- * ----------------------------
- * Dashboard de facturas persistidas en Firestore.
- * Permite ver, filtrar y cambiar el estado de pagada/autorizada.
- */
-
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import * as XLSX from "xlsx";
 import {
   RefreshCw, Search, DollarSign, CheckCircle2,
-  Clock, TrendingUp, ExternalLink, ChevronUp, ChevronDown,
-  ChevronsUpDown, FileX, Filter, Building2
+  Clock, TrendingUp, ChevronUp, ChevronDown,
+  ChevronsUpDown, FileX, Filter, Building2,
+  Copy, Check, MessageSquare, QrCode, Download,
+  ChevronLeft, ChevronRight, Calendar
 } from "lucide-react";
 
 import { useDashboard } from "../hooks/useDashboard";
+import CommentModal from "./CommentModal";
 
-// ---------------------------------------------------------------------------
-// Helpers de formateo
-// ---------------------------------------------------------------------------
-const formatARS = (v) =>
-  new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(v ?? 0);
+const PAGE_SIZE = 20;
 
-const formatARSShort = (v) => {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return formatARS(v);
-};
+// ... (MiniStat, CopyBtn, ToggleBtn, DashboardRow, SortIcon constants as before) ...
+// (I will just replace from the imports to the end of components to be safe, 
+// but keeping the logic I just added for MiniStat and others)
 
 // ---------------------------------------------------------------------------
 // StatCard mini
@@ -54,6 +41,48 @@ function MiniStat({ icon, label, value, sub, color = "text-brand-400", bg = "bg-
 }
 
 // ---------------------------------------------------------------------------
+// Helpers de formateo
+// ---------------------------------------------------------------------------
+const formatARS = (v) =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 0,
+  }).format(v ?? 0);
+
+const formatARSShort = (v) => {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+  return formatARS(v);
+};
+
+function CopyBtn({ value, label, small = false }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e) => {
+    e.stopPropagation();
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(String(value));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) { console.error(err); }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      title={`Copiar ${label}`}
+      className={`
+        transition-all duration-200 p-1 rounded-md
+        ${copied ? "text-emerald-400 bg-emerald-500/10" : "text-slate-500 hover:text-brand-400 hover:bg-slate-700/50"}
+      `}
+    >
+      {copied ? <Check size={small ? 10 : 12} /> : <Copy size={small ? 10 : 12} />}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Toggle button para pagada / autorizada
 // ---------------------------------------------------------------------------
 function ToggleBtn({ value, onLabel, offLabel, onClick, disabled, onColor, offColor }) {
@@ -64,7 +93,7 @@ function ToggleBtn({ value, onLabel, offLabel, onClick, disabled, onColor, offCo
       disabled={disabled}
       title={active ? `Clic para: ${offLabel}` : `Clic para: ${onLabel}`}
       className={`
-        inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
+        inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold
         border transition-all duration-200 select-none
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-105 active:scale-95"}
         ${active ? onColor : offColor}
@@ -79,19 +108,26 @@ function ToggleBtn({ value, onLabel, offLabel, onClick, disabled, onColor, offCo
 // ---------------------------------------------------------------------------
 // Fila de factura del dashboard
 // ---------------------------------------------------------------------------
-function DashboardRow({ invoice, onToggle, isUpdating }) {
+function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
   const isDisabled = isUpdating;
   
   const isInvalidReceptor = invoice.status === "receptor_invalido";
+  const hasComment = invoice.comentario && invoice.comentario.trim().length > 0;
   
+  // Extraer fecha corta de created_at (ISO string)
+  const fechaRecibido = invoice.created_at 
+    ? new Date(invoice.created_at).toLocaleDateString("es-AR", { day: '2-digit', month: '2-digit' })
+    : "—";
+
   const rowClass = isInvalidReceptor
     ? "bg-red-600/20 hover:bg-red-600/30"
-    : (invoice.es_credito 
-        ? "bg-violet-500/10 hover:bg-violet-500/20" 
-        : (invoice.moneda === "USD" ? "bg-blue-500/10 hover:bg-blue-500/20" : "hover:bg-slate-800/40")
+    : (invoice.pagada
+        ? "bg-emerald-500/10 hover:bg-emerald-600/15 border-l-4 border-l-emerald-500"
+        : (invoice.es_credito 
+            ? "bg-violet-500/10 hover:bg-violet-500/20" 
+            : (invoice.moneda === "USD" ? "bg-blue-500/10 hover:bg-blue-500/20" : "hover:bg-slate-800/40")
+          )
       );
-
-
 
   return (
     <motion.tr
@@ -109,76 +145,97 @@ function DashboardRow({ invoice, onToggle, isUpdating }) {
           }`}>
             <Building2 size={13} className={invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-slate-400")} />
           </div>
-          <div className="min-w-0">
-            <p className={`text-sm font-medium truncate max-w-[180px] ${
-              invoice.es_credito ? "text-red-300" : (invoice.moneda === "USD" ? "text-blue-300" : "text-white")
-            }`}>
-              {invoice.razon_social ?? <span className="text-slate-500 italic">Sin nombre</span>}
-            </p>
-            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{invoice.cuit_emisor ?? "—"}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 group/copy">
+              <p className={`text-sm font-medium truncate max-w-[150px] ${
+                invoice.es_credito ? "text-red-300" : (invoice.moneda === "USD" ? "text-blue-300" : "text-white")
+              }`}>
+                {invoice.razon_social ?? <span className="text-slate-500 italic">Sin nombre</span>}
+              </p>
+              <CopyBtn value={invoice.razon_social} label="Razón Social" small />
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-slate-500 font-mono mt-0.5">{invoice.cuit_emisor ?? "—"}</p>
+              <CopyBtn value={invoice.cuit_emisor} label="CUIT" small />
+            </div>
           </div>
         </div>
       </td>
 
-
       {/* Comprobante */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-1.5">
-          <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-            invoice.es_credito ? "bg-red-500/20 text-red-300" : "bg-slate-700/60 text-slate-300"
-          }`}>
-            {invoice.tipo_factura || "FAC"}
-          </span>
-          <p className="text-[11px] text-slate-400 font-mono">
-            {invoice.punto_venta ? `${String(invoice.punto_venta).padStart(4, "0")}-` : ""}
-            {invoice.numero_comprobante
-              ? String(invoice.numero_comprobante).padStart(8, "0")
-              : <span>—</span>
-            }
-          </p>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+              invoice.es_credito ? "bg-red-500/20 text-red-300" : "bg-slate-700/60 text-slate-300"
+            }`}>
+              {invoice.tipo_factura || "FAC"}
+            </span>
+            <p className="text-[11px] text-slate-400 font-mono">
+              {invoice.punto_venta ? `${String(invoice.punto_venta).padStart(4, "0")}-` : ""}
+              {invoice.numero_comprobante
+                ? String(invoice.numero_comprobante).padStart(8, "0")
+                : <span>—</span>
+              }
+            </p>
+            <CopyBtn value={invoice.numero_comprobante} label="Número" small />
+          </div>
         </div>
       </td>
 
-      {/* Fecha */}
+      {/* Fecha Emision */}
       <td className="px-4 py-3 whitespace-nowrap">
         <span className="text-xs text-slate-500">{invoice.fecha_emision ?? "—"}</span>
       </td>
 
-      {/* IVA */}
-      <td className="px-4 py-3 text-right">
-        <span className="text-xs text-slate-500 font-mono">
-          {invoice.iva != null ? formatARS(invoice.iva) : "—"}
-        </span>
-      </td>
-
-      {/* Otros */}
-      <td className="px-4 py-3 text-right">
-        <span className="text-xs text-slate-500 font-mono">
-          {invoice.otros_tributos != null ? formatARS(invoice.otros_tributos) : "—"}
-        </span>
-      </td>
-
       {/* Importe */}
       <td className="px-4 py-3 text-right">
-        <div className="flex flex-col items-end">
-          <span className={`text-sm font-bold font-mono ${
-             invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-white")
-          }`}>
-            {invoice.total != null ? formatARS(invoice.total) : <span className="text-slate-600">—</span>}
-          </span>
-          {invoice.moneda === "USD" && (
-            <span className="text-[9px] text-blue-500/80 font-medium">USD Conv.</span>
-          )}
+        <div className="flex items-center justify-end gap-2 group/total">
+          <div className="flex flex-col items-end">
+            <span className={`text-sm font-bold font-mono ${
+              invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-white")
+            }`}>
+              {invoice.total != null ? formatARS(invoice.total) : <span className="text-slate-600">—</span>}
+            </span>
+            {invoice.moneda === "USD" && (
+              <span className="text-[9px] text-blue-500/80 font-medium">USD Conv.</span>
+            )}
+          </div>
+          <CopyBtn value={invoice.total} label="Importe" />
         </div>
       </td>
 
+      {/* Recibido (Fecha Procesamiento) */}
+      <td className="px-4 py-3 text-center">
+        <div className="flex flex-col">
+          <span className="text-[11px] font-bold text-slate-400">{fechaRecibido}</span>
+          <span className="text-[9px] text-slate-600 uppercase tracking-tighter">Carga</span>
+        </div>
+      </td>
+
+      {/* Nota / Comentario */}
+      <td className="px-4 py-3 text-center">
+        <button
+          onClick={() => onComment(invoice)}
+          className={`
+            p-2 rounded-xl transition-all active:scale-90
+            ${hasComment 
+              ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30" 
+              : "bg-slate-800 text-slate-600 hover:text-slate-400"
+            }
+          `}
+          title={hasComment ? "Ver/Editar comentario" : "Agregar comentario"}
+        >
+          <MessageSquare size={16} fill={hasComment ? "currentColor" : "none"} />
+        </button>
+      </td>
 
       {/* Estado Autorizada */}
       <td className="px-4 py-3 text-center">
         <ToggleBtn
           value={invoice.autorizada}
-          onLabel="Autorizada"
-          offLabel="Pendiente"
+          onLabel="AUTORIZ."
+          offLabel="PEND."
           onClick={() => onToggle(invoice.id, "autorizada", invoice.autorizada)}
           disabled={isDisabled}
           onColor="bg-violet-500/20 text-violet-300 border border-violet-500/40"
@@ -190,8 +247,8 @@ function DashboardRow({ invoice, onToggle, isUpdating }) {
       <td className="px-4 py-3 text-center">
         <ToggleBtn
           value={invoice.pagada}
-          onLabel="Pagada"
-          offLabel="Recibida"
+          onLabel="PAGO"
+          offLabel="NOPAG"
           onClick={() => onToggle(invoice.id, "pagada", invoice.pagada)}
           disabled={isDisabled}
           onColor="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
@@ -199,26 +256,29 @@ function DashboardRow({ invoice, onToggle, isUpdating }) {
         />
       </td>
 
-      {/* Link QR */}
+      {/* Link QR / Copiar */}
       <td className="px-4 py-3 text-center">
-        {invoice.url_qr_afip && invoice.url_qr_afip.startsWith("http") ? (
-          <a
-            href={invoice.url_qr_afip}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
-          >
-            <ExternalLink size={12} />
-            AFIP
-          </a>
-        ) : (
-          <span className="text-xs text-slate-600">—</span>
-        )}
+        <div className="flex items-center justify-center gap-1.5">
+          {invoice.url_qr_afip && (
+            <>
+              <a
+                href={invoice.url_qr_afip}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg bg-slate-800 text-brand-500 hover:bg-brand-500 hover:text-white transition-all"
+                title="Abrir en AFIP"
+              >
+                <QrCode size={14} />
+              </a>
+              <CopyBtn value={invoice.url_qr_afip} label="Link AFIP" />
+            </>
+          )}
+          {!invoice.url_qr_afip && <span className="text-xs text-slate-700">—</span>}
+        </div>
       </td>
     </motion.tr>
   );
 }
-
 
 // ---------------------------------------------------------------------------
 // Sort Icon
@@ -235,16 +295,15 @@ function SortIcon({ col, sortKey, sortDir }) {
 // ---------------------------------------------------------------------------
 const COLS = [
   { key: "razon_social",       label: "Proveedor",       sortable: true,  align: "left"   },
-  { key: "numero_comprobante", label: "Comprobante",     sortable: false, align: "left"   },
-  { key: "fecha_emision",      label: "Fecha",           sortable: true,  align: "left"   },
-  { key: "iva",                label: "IVA",             sortable: true,  align: "right"  },
-  { key: "otros_tributos",     label: "Otros / Ret",     sortable: true,  align: "right"  },
+  { key: "numero_comprobante", label: "Factura",         sortable: false, align: "left"   },
+  { key: "fecha_emision",      label: "Emisión",         sortable: true,  align: "left"   },
   { key: "total",              label: "Importe",         sortable: true,  align: "right"  },
-  { key: "autorizada",         label: "Autorización",    sortable: true,  align: "center" },
-  { key: "pagada",             label: "Pago",            sortable: true,  align: "center" },
-  { key: "qr",                 label: "Verificar",       sortable: false, align: "center" },
+  { key: "created_at",         label: "Recibido",        sortable: true,  align: "center" },
+  { key: "comentario",         label: "Obs.",            sortable: false, align: "center" },
+  { key: "autorizada",         label: "Aut.",            sortable: true,  align: "center" },
+  { key: "pagada",             label: "Pag.",            sortable: true,  align: "center" },
+  { key: "qr",                 label: "QR",              sortable: false, align: "center" },
 ];
-
 
 const FILTERS = [
   { id: "all",        label: "Todas"         },
@@ -253,21 +312,40 @@ const FILTERS = [
   { id: "autorizada", label: "Autorizadas"   },
 ];
 
-const PAGE_SIZE = 20;
-
 export default function DashboardPage() {
-  const { invoices, loading, error, updatingId, stats, fetchInvoices, toggleField } = useDashboard();
+  const { 
+    invoices, loading, error, updatingId, stats, 
+    fetchInvoices, toggleField, updateComment 
+  } = useDashboard();
 
   const [search, setSearch]       = useState("");
   const [filter, setFilter]       = useState("all");
-  const [sortKey, setSortKey]     = useState("fecha_emision");
+  const [sortKey, setSortKey]     = useState("created_at");
   const [sortDir, setSortDir]     = useState("desc");
   const [page, setPage]           = useState(1);
+  
+  // --- Filtros Temporales ---
+  const [viewMode, setViewMode] = useState("month"); // "month" | "all"
+  const [displayDate, setDisplayDate] = useState(new Date());
 
-  // Filtrado + búsqueda
+  // Modal de Comentarios
+  const [commentModal, setCommentModal] = useState({ isOpen: false, invoice: null });
+
+  // 1. Filtrado + búsqueda + Mes
   const filtered = useMemo(() => {
     let list = [...invoices];
 
+    // Filtro de Mes (basado en created_at)
+    if (viewMode === "month") {
+      const year = displayDate.getFullYear();
+      const month = displayDate.getMonth();
+      list = list.filter(i => {
+        const d = new Date(i.created_at);
+        return d.getFullYear() === year && d.getMonth() === month;
+      });
+    }
+
+    // Filtros de estado
     if (filter === "pendiente")  list = list.filter((i) => !i.pagada);
     if (filter === "pagada")     list = list.filter((i) => i.pagada);
     if (filter === "autorizada") list = list.filter((i) => i.autorizada);
@@ -282,20 +360,52 @@ export default function DashboardPage() {
       );
     }
     return list;
-  }, [invoices, filter, search]);
+  }, [invoices, filter, search, viewMode, displayDate]);
 
-  // Ordenamiento
+  // 2. Ordenamiento
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const av = a[sortKey] ?? "";
-      const bv = b[sortKey] ?? "";
+      let av = a[sortKey] ?? "";
+      let bv = b[sortKey] ?? "";
+      if (sortKey === "fecha_emision" || sortKey === "created_at") {
+        av = new Date(av).getTime(); bv = new Date(bv).getTime();
+      }
       if (typeof av === "boolean") return sortDir === "asc" ? Number(av) - Number(bv) : Number(bv) - Number(av);
       if (typeof av === "number")  return sortDir === "asc" ? av - bv : bv - av;
-      return sortDir === "asc"
-        ? String(av).localeCompare(String(bv))
-        : String(bv).localeCompare(String(av));
+      return sortDir === "asc" ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
     });
   }, [filtered, sortKey, sortDir]);
+
+  // 3. Exportar Excel
+  const handleExportExcel = () => {
+    const data = sorted.map(i => ({
+      "Proveedor": i.razon_social,
+      "CUIT": i.cuit_emisor,
+      "Tipo": i.tipo_factura,
+      "Punto Venta": i.punto_venta,
+      "Número": i.numero_comprobante,
+      "Fecha Emisión": i.fecha_emision,
+      "Recibido": i.created_at ? new Date(i.created_at).toLocaleDateString() : "-",
+      "Moneda": i.moneda,
+      "Total": i.total,
+      "Cuenta Contable": i.cuenta_contable_sugerida,
+      "Autorizada": i.autorizada ? "SI" : "NO",
+      "Pagada": i.pagada ? "SI" : "NO",
+      "Obs/Comentario": i.comentario || ""
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Facturas");
+    XLSX.writeFile(wb, `Reporte_Facturas_${viewMode === 'month' ? (displayDate.getMonth()+1)+'_'+displayDate.getFullYear() : 'Total'}.xlsx`);
+  };
+
+  const changeMonth = (offset) => {
+    const next = new Date(displayDate);
+    next.setMonth(next.getMonth() + offset);
+    setDisplayDate(next);
+    setPage(1);
+  };
 
   // Paginación
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
@@ -308,6 +418,12 @@ export default function DashboardPage() {
     setPage(1);
   };
 
+  const handleOpenComment = (invoice) => {
+    setCommentModal({ isOpen: true, invoice });
+  };
+
+  const monthLabel = displayDate.toLocaleDateString("es-AR", { month: 'long', year: 'numeric' });
+
   return (
     <div className="space-y-6">
 
@@ -318,52 +434,108 @@ export default function DashboardPage() {
             Dashboard de <span className="brand-gradient-text">Facturas</span>
           </h2>
           <p className="text-slate-400 text-sm mt-1">
-            {invoices.length} factura{invoices.length !== 1 ? "s" : ""} en la base de datos
+            {filtered.length} visible{filtered.length !== 1 ? "s" : ""} de {invoices.length} total
           </p>
         </div>
-        <button
-          onClick={fetchInvoices}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700/50
-                     text-sm text-slate-300 hover:text-white hover:bg-slate-700 transition-all
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          Actualizar
-        </button>
+        
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-all shadow-lg shadow-emerald-500/10"
+          >
+            <Download size={14} />
+            EXPORTAR EXCEL
+          </button>
+          
+          <button
+            onClick={fetchInvoices}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700/50
+                       text-sm text-slate-300 hover:text-white hover:bg-slate-700 transition-all
+                       disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Actualizar
+          </button>
+        </div>
+      </div>
+
+      {/* ---- Selector de Mes / Vista ---- */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center bg-slate-800/40 p-1.5 rounded-2xl border border-slate-700/50">
+        <div className="flex p-1 bg-slate-900/60 rounded-xl border border-slate-800">
+          <button
+            onClick={() => setViewMode("month")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === "month" ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            VISTA MENSUAL
+          </button>
+          <button
+            onClick={() => setViewMode("all")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === "all" ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            VER TODAS
+          </button>
+        </div>
+
+        {viewMode === "month" && (
+          <div className="flex items-center gap-4 ml-auto sm:mr-4">
+            <button
+              onClick={() => changeMonth(-1)}
+              className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="flex items-center gap-2 px-3 py-1 bg-slate-900/40 rounded-lg border border-slate-800">
+              <Calendar size={14} className="text-brand-400" />
+              <span className="text-xs font-bold text-white uppercase min-w-[120px] text-center">
+                {monthLabel}
+              </span>
+            </div>
+            <button
+              onClick={() => changeMonth(1)}
+              className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ---- Stats Cards ---- */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <MiniStat
           icon={<TrendingUp size={18} />}
-          label="Total Facturas"
-          value={stats.total}
-          sub={`${formatARSShort(stats.totalImporte)} en total`}
+          label={viewMode === 'month' ? "Facturas Mes" : "Total Histórico"}
+          value={filtered.length}
+          sub={`${formatARSShort(filtered.reduce((s,i) => s + (i.total ?? 0), 0))} total`}
           color="text-brand-400"
           bg="bg-brand-500/10"
         />
         <MiniStat
           icon={<Clock size={18} />}
-          label="Sin Pagar"
-          value={stats.pendientesPago}
-          sub="Pendientes de pago"
+          label="Pendientes"
+          value={filtered.filter(i => !i.pagada).length}
+          sub="Sin pagar"
           color="text-amber-400"
           bg="bg-amber-500/10"
         />
         <MiniStat
           icon={<CheckCircle2 size={18} />}
-          label="Pagadas"
-          value={stats.pagadas}
-          sub={`${formatARSShort(stats.importePagado)} abonado`}
+          label="Abonadas"
+          value={filtered.filter(i => i.pagada).length}
+          sub="Saldadas"
           color="text-emerald-400"
           bg="bg-emerald-500/10"
         />
         <MiniStat
           icon={<DollarSign size={18} />}
           label="Autorizadas"
-          value={stats.autorizadas}
-          sub={`de ${stats.total} en total`}
+          value={filtered.filter(i => i.autorizada).length}
+          sub="Listas para pago"
           color="text-violet-400"
           bg="bg-violet-500/10"
         />
@@ -421,12 +593,10 @@ export default function DashboardPage() {
                     key={col.key}
                     onClick={() => handleSort(col.key)}
                     className={`
-                      px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500
+                      px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500
                       ${col.align === "right" ? "text-right" : ""}
                       ${col.align === "center" ? "text-center" : ""}
                       ${col.sortable ? "cursor-pointer hover:text-slate-300 select-none" : ""}
-                      ${col.hidden === "lg" ? "hidden lg:table-cell" : ""}
-                      ${col.hidden === "xl" ? "hidden xl:table-cell" : ""}
                       transition-colors duration-150
                     `}
                   >
@@ -441,7 +611,6 @@ export default function DashboardPage() {
 
             <tbody>
               {loading ? (
-                // Skeleton loader
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-slate-700/20">
                     {COLS.map((col) => (
@@ -459,25 +628,19 @@ export default function DashboardPage() {
                         key={invoice.id}
                         invoice={invoice}
                         onToggle={toggleField}
+                        onComment={handleOpenComment}
                         isUpdating={updatingId === invoice.id}
                       />
                     ))
                   ) : (
-                    <motion.tr
-                      key="empty"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
+                    <motion.tr key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                       <td colSpan={COLS.length} className="px-4 py-20 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <div className="w-14 h-14 rounded-2xl bg-slate-800/60 flex items-center justify-center">
                             <FileX size={24} className="text-slate-600" />
                           </div>
                           <p className="text-sm text-slate-500">
-                            {search || filter !== "all"
-                              ? "Sin resultados para el filtro aplicado"
-                              : "No hay facturas en la base de datos todavía"
-                            }
+                            {search || filter !== "all" ? "Sin resultados" : "No hay facturas en este periodo"}
                           </p>
                         </div>
                       </td>
@@ -486,21 +649,6 @@ export default function DashboardPage() {
                 </AnimatePresence>
               )}
             </tbody>
-
-            {/* Footer totales */}
-            {filtered.length > 0 && !loading && (
-              <tfoot>
-                <tr className="border-t border-slate-700/50 bg-slate-800/20">
-                  <td colSpan={2} className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Totales ({filtered.length} facturas)
-                  </td>
-                  <td className="px-4 py-3 text-right text-xs font-bold text-brand-400 font-mono">
-                    {formatARS(filtered.reduce((s, i) => s + (i.total ?? 0), 0))}
-                  </td>
-                  <td colSpan={5} />
-                </tr>
-              </tfoot>
-            )}
           </table>
         </div>
 
@@ -530,6 +678,14 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      <CommentModal
+        isOpen={commentModal.isOpen}
+        initialValue={commentModal.invoice?.comentario}
+        invoiceInfo={commentModal.invoice ? `${commentModal.invoice.razon_social} - Factura ${commentModal.invoice.numero_comprobante}` : ""}
+        onClose={() => setCommentModal({ isOpen: false, invoice: null })}
+        onSave={(text) => updateComment(commentModal.invoice.id, text)}
+      />
     </div>
   );
 }

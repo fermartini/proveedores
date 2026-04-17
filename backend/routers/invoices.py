@@ -223,7 +223,7 @@ async def update_invoice(doc_id: str, payload: dict):
     if not field:
         raise HTTPException(status_code=400, detail="El campo 'field' es requerido.")
 
-    allowed_fields = {"autorizada", "pagada", "cuenta_contable"}
+    allowed_fields = {"autorizada", "pagada", "cuenta_contable", "comentario"}
     if field not in allowed_fields:
         raise HTTPException(
             status_code=422,

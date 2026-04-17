@@ -1,91 +1,34 @@
-/**
- * hooks/useDashboard.js
- * ---------------------
- * Hook para el dashboard de facturas persistidas en Firestore.
- * Maneja fetch, filtrado, y actualización de campos (pagada, autorizada).
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { getInvoices, updateInvoice } from "../services/api";
+import { useMemo } from "react";
+import { useInvoiceContext } from "../context/InvoiceContext";
 
 export const useDashboard = () => {
-  const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [updatingId, setUpdatingId] = useState(null); // ID del doc que está siendo actualizado
+  const { 
+    dashboardInvoices, dbLoading, error, 
+    fetchDashboardInvoices, toggleDashboardField, updateDashboardComment 
+  } = useInvoiceContext();
 
-  // ---------------------------------------------------------------------------
-  // fetchInvoices — Obtener todas las facturas desde el backend/Firestore
-  // ---------------------------------------------------------------------------
-  const fetchInvoices = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getInvoices();
-      setInvoices(data);
-    } catch (err) {
-      setError("Error al cargar las facturas desde la base de datos.");
-      console.error("[useDashboard] Error al obtener facturas:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
-
-  // ---------------------------------------------------------------------------
-  // toggleField — Cambiar pagada o autorizada de una factura
-  // ---------------------------------------------------------------------------
-  const toggleField = useCallback(async (docId, field, currentValue) => {
-    setUpdatingId(docId);
-    const newValue = !currentValue;
-
-    // Optimistic update
-    setInvoices((prev) =>
-      prev.map((inv) =>
-        inv.id === docId ? { ...inv, [field]: newValue } : inv
-      )
-    );
-
-    try {
-      await updateInvoice(docId, field, newValue);
-    } catch (err) {
-      // Revertir si falla
-      setInvoices((prev) =>
-        prev.map((inv) =>
-          inv.id === docId ? { ...inv, [field]: currentValue } : inv
-        )
-      );
-      setError(`Error al actualizar el campo "${field}".`);
-      console.error("[useDashboard] Error al actualizar:", err);
-    } finally {
-      setUpdatingId(null);
-    }
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Estadísticas del dashboard
-  // ---------------------------------------------------------------------------
-  const stats = {
-    total: invoices.length,
-    pagadas: invoices.filter((i) => i.pagada).length,
-    pendientesPago: invoices.filter((i) => !i.pagada).length,
-    autorizadas: invoices.filter((i) => i.autorizada).length,
-    totalImporte: invoices.reduce((s, i) => s + (i.total ?? 0), 0),
-    importePagado: invoices
+  // Mapeamos los nombres para mantener compatibilidad con el componente DashboardPage
+  const stats = useMemo(() => {
+    const total = dashboardInvoices.length;
+    const pagadas = dashboardInvoices.filter((i) => i.pagada).length;
+    const pendientesPago = total - pagadas;
+    const autorizadas = dashboardInvoices.filter((i) => i.autorizada).length;
+    const totalImporte = dashboardInvoices.reduce((s, i) => s + (i.total ?? 0), 0);
+    const importePagado = dashboardInvoices
       .filter((i) => i.pagada)
-      .reduce((s, i) => s + (i.total ?? 0), 0),
-  };
+      .reduce((s, i) => s + (i.total ?? 0), 0);
+
+    return { total, pagadas, pendientesPago, autorizadas, totalImporte, importePagado };
+  }, [dashboardInvoices]);
 
   return {
-    invoices,
-    loading,
+    invoices: dashboardInvoices,
+    loading: dbLoading,
     error,
-    updatingId,
+    updatingId: null, // El context maneja el estado de carga por campo ahora
     stats,
-    fetchInvoices,
-    toggleField,
+    fetchInvoices: fetchDashboardInvoices,
+    toggleField: toggleDashboardField,
+    updateComment: updateDashboardComment,
   };
 };
