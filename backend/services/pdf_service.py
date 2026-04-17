@@ -322,6 +322,20 @@ def _process_single_page(
     if used_llm and not error_detail and status == "procesado":
         error_detail = "⚡ Datos extraídos mediante IA (Gemini 1.5 Flash)."
 
+    # --- Mejora Fluida: Búsqueda de Razón Social por CUIT ---
+    # Si falta el nombre pero tenemos el CUIT, buscamos en el historial o en registros públicos
+    if not (razon_social and str(razon_social).strip()) and parsed_fields.get("cuit"):
+        from services.cuit_service import lookup_cuit_name
+        public_name = lookup_cuit_name(parsed_fields.get("cuit"))
+        if public_name:
+            razon_social = public_name
+            parsed_fields["razon_social"] = public_name
+            info_msg = "🔍 Nombre recuperado vía consulta pública por CUIT."
+            error_detail = f"{error_detail} | {info_msg}" if error_detail else info_msg
+            # Marcar como procesado si ya tenemos nombre y nro
+            if numero is not None:
+                status = "procesado"
+
     return InvoiceResult(
         id=f"{filename}-{datetime.utcnow().timestamp()}", # ID más robusto
         filename=filename,
