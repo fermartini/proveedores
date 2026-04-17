@@ -110,8 +110,7 @@ export const InvoiceProvider = ({ children }) => {
       cotizacion: inv.cotizacion ?? 1.0,
       es_credito: inv.es_credito ?? false,
       cuit_receptor: inv.cuit_receptor ?? null,
-      comentario: inv.comentario ?? null,
-      pdf_url: inv.pdf_url ?? null
+      comentario: inv.comentario ?? null
     }));
 
     try {

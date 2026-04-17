@@ -70,12 +70,8 @@ def _init_firebase() -> Optional[firestore.Client]:
                 cred = credentials.Certificate(credentials_path)
                 logger.info(f"[Firebase] Usando credenciales desde archivo: {credentials_path}")
 
-            # bucket_name debe ser 'nombre-del-proyecto.appspot.com' o similar
-            bucket_name = os.getenv("FIREBASE_STORAGE_BUCKET")
-            firebase_admin.initialize_app(cred, {
-                'storageBucket': bucket_name
-            })
-            logger.info(f"[Firebase] SDK inicializado correctamente (Storage activo: {bool(bucket_name)}).")
+            firebase_admin.initialize_app(cred)
+            logger.info("[Firebase] SDK inicializado correctamente.")
 
         _db = firestore.client()
         return _db
@@ -202,49 +198,4 @@ def update_invoice_field(doc_id: str, field: str, value) -> bool:
         return True
     except Exception as exc:
         logger.error(f"[Firebase] Error al actualizar factura {doc_id}: {exc}")
-        return False
-
-from firebase_admin import storage
-
-def upload_pdf(file_bytes: bytes, filename: str) -> Optional[str]:
-    """
-    Sube un archivo a Firebase Storage y retorna la URL pública de acceso.
-    """
-    _init_firebase()
-    bucket_name = os.getenv("FIREBASE_STORAGE_BUCKET")
-    if not bucket_name:
-        logger.warning("[Firebase] FIREBASE_STORAGE_BUCKET no configurado. No se subirá el PDF.")
-        return None
-
-    try:
-        bucket = storage.bucket()
-        # Generar un nombre único basado en timestamp para evitar colisiones
-        unique_name = f"invoices/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
-        blob = bucket.blob(unique_name)
-        
-        blob.upload_from_string(file_bytes, content_type="application/pdf")
-        
-        # Intentar hacer pública la URL (Depende de los permisos del bucket)
-        try:
-            blob.make_public()
-            return blob.public_url
-        except Exception:
-            # Fallback: Solo el path interno si no se puede hacer público
-            return f"gs://{bucket_name}/{unique_name}"
-
-    except Exception as exc:
-        logger.error(f"[Firebase] Error al subir PDF: {exc}")
-        return None
-
-
-def delete_invoice(doc_id: str) -> bool:
-    """Elimina una factura de Firestore."""
-    db = _init_firebase()
-    if db is None: return False
-    try:
-        db.collection(COLLECTION_NAME).document(doc_id).delete()
-        logger.info(f"[Firebase] Factura {doc_id} eliminada.")
-        return True
-    except Exception as exc:
-        logger.error(f"[Firebase] Error al eliminar {doc_id}: {exc}")
         return False
