@@ -59,6 +59,8 @@ class InvoiceResult(BaseModel):
     )
     autorizada: bool = Field(default=True, description="¿Fue autorizada manualmente?")
     pagada: bool = Field(default=False, description="¿Fue pagada?")
+    comentario: Optional[str] = Field(None, description="Observaciones o notas sobre la factura")
+    pdf_url: Optional[str] = Field(None, description="URL del archivo PDF guardado en la nube")
 
     # --- Estado del procesamiento ---
     status: str = Field(
@@ -103,4 +105,6 @@ class InvoiceDBPayload(BaseModel):
     moneda: str = Field("ARS")
     cotizacion: float = Field(1.0)
     es_credito: bool = Field(False)
+    comentario: Optional[str] = Field(None)
+    pdf_url: Optional[str] = Field(None)
 

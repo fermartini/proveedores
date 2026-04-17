@@ -6,7 +6,7 @@ import {
   Clock, TrendingUp, ChevronUp, ChevronDown,
   ChevronsUpDown, FileX, Filter, Building2,
   Copy, Check, MessageSquare, QrCode, Download,
-  ChevronLeft, ChevronRight, Calendar
+  ChevronLeft, ChevronRight, Calendar, FileText
 } from "lucide-react";
 
 import { useDashboard } from "../hooks/useDashboard";
@@ -273,7 +273,18 @@ function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
               <CopyBtn value={invoice.url_qr_afip} label="Link AFIP" />
             </>
           )}
-          {!invoice.url_qr_afip && <span className="text-xs text-slate-700">—</span>}
+          {invoice.pdf_url && (
+            <a
+              href={invoice.pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all"
+              title="Ver PDF en la Nube"
+            >
+              <FileText size={14} />
+            </a>
+          )}
+          {!invoice.url_qr_afip && !invoice.pdf_url && <span className="text-xs text-slate-700">—</span>}
         </div>
       </td>
     </motion.tr>

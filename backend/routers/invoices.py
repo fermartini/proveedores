@@ -93,6 +93,18 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
             try:
                 # Ahora process_pdf devuelve una LISTA de InvoiceResult
                 page_results: List[InvoiceResult] = future.result()
+                
+                # --- Guardado en la Nube (Firebase Storage) ---
+                # Subimos el PDF original y asociamos la URL a todos los resultados de este archivo
+                try:
+                    # Recuperar bytes originales para este archivo
+                    _, content = next(c for n, c in file_data if n == filename)
+                    cloud_url = firebase_client.upload_pdf(content, filename)
+                    for r in page_results:
+                        r.pdf_url = cloud_url
+                except Exception as storage_err:
+                    logger.warning(f"[Storage] No se pudo persistir el PDF {filename} en la nube: {storage_err}")
+
                 results.extend(page_results)
                 logger.info(f"[Upload] ✓ Procesado: {filename} ({len(page_results)} facturas)")
             except Exception as exc:
