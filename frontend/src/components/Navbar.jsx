@@ -4,8 +4,9 @@
  * Barra de navegación superior con tabs para cambiar de sección.
  */
 
-import { FileText, Activity, Zap, UploadCloud, LayoutDashboard } from "lucide-react";
+import { FileText, Activity, Zap, UploadCloud, LayoutDashboard, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * @param {object}   props
@@ -14,6 +15,8 @@ import { motion } from "framer-motion";
  * @param {Function} props.onTabChange   - Callback para cambiar de tab.
  */
 export default function Navbar({ totalFacturas = 0, activeTab, onTabChange }) {
+  const { logOut, currentUser, nombreEmpresa } = useAuth();
+
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -106,8 +109,18 @@ export default function Navbar({ totalFacturas = 0, activeTab, onTabChange }) {
 
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-emerald-400 font-medium">Online</span>
+            <span className="text-xs text-emerald-400 font-medium hidden sm:inline">{nombreEmpresa || "Online"}</span>
           </div>
+
+          {currentUser && (
+            <button
+              onClick={logOut}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded-lg transition-colors border border-transparent hover:border-slate-600"
+              title="Cerrar sesión"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </div>
     </motion.header>

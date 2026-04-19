@@ -12,6 +12,7 @@ import {
   getInvoices as apiGetDashboardInvoices,
   updateInvoice as apiUpdateDashboardInvoice
 } from "../services/api";
+import { useAuth } from "./AuthContext";
 
 const InvoiceContext = createContext();
 
@@ -24,6 +25,7 @@ export const useInvoiceContext = () => {
 };
 
 export const InvoiceProvider = ({ children }) => {
+  const { cuit } = useAuth();
   const [invoices, setInvoices] = useState([]); // Sesión de carga actual
   const [dashboardInvoices, setDashboardInvoices] = useState([]); // Historial DB
   const [uploading, setUploading] = useState(false);
@@ -38,14 +40,14 @@ export const InvoiceProvider = ({ children }) => {
   const fetchDashboardInvoices = useCallback(async () => {
     setDbLoading(true);
     try {
-      const data = await apiGetDashboardInvoices();
+      const data = await apiGetDashboardInvoices(cuit);
       setDashboardInvoices(data);
     } catch (err) {
       console.error("Error al cargar historial:", err);
     } finally {
       setDbLoading(false);
     }
-  }, []);
+  }, [cuit]);
 
   useEffect(() => {
     fetchDashboardInvoices();
@@ -59,7 +61,7 @@ export const InvoiceProvider = ({ children }) => {
     setError(null);
 
     try {
-      const results = await apiUploadInvoices(files, (percent) => {
+      const results = await apiUploadInvoices(files, cuit, (percent) => {
         setUploadProgress(percent);
       });
 
@@ -99,7 +101,7 @@ export const InvoiceProvider = ({ children }) => {
     } finally {
       setUploading(false);
     }
-  }, [fileMap]);
+  }, [fileMap, cuit]);
 
   // 3. Confirm
   const handleConfirm = useCallback(async (mode = "valid_only") => {
@@ -125,7 +127,8 @@ export const InvoiceProvider = ({ children }) => {
       cotizacion: inv.cotizacion ?? 1.0,
       es_credito: inv.es_credito ?? false,
       cuit_receptor: inv.cuit_receptor ?? null,
-      comentario: inv.comentario ?? null
+      comentario: inv.comentario ?? null,
+      company_cuit: cuit || null
     }));
 
     try {
@@ -139,7 +142,7 @@ export const InvoiceProvider = ({ children }) => {
     } finally {
       setUploading(false);
     }
-  }, [invoices, fetchDashboardInvoices]);
+  }, [invoices, fetchDashboardInvoices, cuit]);
 
   const removeInvoice = useCallback((id) => {
     setInvoices(prev => prev.filter(i => i.id !== id));

@@ -14,6 +14,7 @@
  */
 
 import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import {
   getFirestore,
   collection,
@@ -42,8 +43,9 @@ const firebaseConfig = {
 // Inicializar Firebase (singleton)
 const app = initializeApp(firebaseConfig);
 
-// Instancia de Firestore
+// Instancia de Firestore y Auth
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 
 // Nombre de la colección (debe coincidir con el backend)
 const INVOICES_COLLECTION = "invoices";

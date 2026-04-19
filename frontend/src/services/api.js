@@ -27,16 +27,21 @@ const apiClient = axios.create({
  * Sube múltiples archivos PDF al backend para su procesamiento.
  *
  * @param {File[]} files - Array de objetos File (PDF).
+ * @param {string} empresa_cuit - CUIT de la empresa auth.
  * @param {function} onProgress - Callback de progreso (0-100).
  * @returns {Promise<InvoiceResult[]>} Array de resultados procesados.
  */
-export const uploadInvoices = async (files, onProgress) => {
+export const uploadInvoices = async (files, empresa_cuit, onProgress) => {
   const formData = new FormData();
 
   // Agregar cada archivo con el mismo campo "files" (FastAPI List[UploadFile])
   files.forEach((file) => {
     formData.append("files", file);
   });
+
+  if (empresa_cuit) {
+    formData.append("empresa_cuit", empresa_cuit);
+  }
 
   const response = await apiClient.post("/api/upload", formData, {
     headers: {
@@ -60,8 +65,9 @@ export const uploadInvoices = async (files, onProgress) => {
  * Obtiene todas las facturas desde el backend.
  * Usar este endpoint si Firebase no está configurado en el frontend.
  */
-export const getInvoices = async () => {
-  const response = await apiClient.get("/api/invoices");
+export const getInvoices = async (empresa_cuit) => {
+  const params = empresa_cuit ? { empresa_cuit } : {};
+  const response = await apiClient.get("/api/invoices", { params });
   return response.data.invoices ?? [];
 };
 

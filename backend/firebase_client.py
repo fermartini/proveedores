@@ -151,9 +151,10 @@ def _serialize_doc(doc_dict: dict) -> dict:
     return result
 
 
-def get_all_invoices() -> list:
+def get_all_invoices(company_cuit: str = None) -> list:
     """
     Obtiene todas las facturas de Firestore ordenadas por fecha de creación.
+    Si se provee un company_cuit, filtra por ese CUIT.
 
     Returns:
         Lista de dicts con los datos de cada factura, incluyendo su ID de documento.
@@ -163,11 +164,12 @@ def get_all_invoices() -> list:
         return []
 
     try:
-        docs = (
-            db.collection(COLLECTION_NAME)
-            .order_by("created_at", direction=firestore.Query.DESCENDING)
-            .stream()
-        )
+        query = db.collection(COLLECTION_NAME).order_by("created_at", direction=firestore.Query.DESCENDING)
+        
+        if company_cuit:
+            query = query.where("company_cuit", "==", company_cuit)
+            
+        docs = query.stream()
         return [{"id": doc.id, **_serialize_doc(doc.to_dict())} for doc in docs]
 
     except Exception as exc:

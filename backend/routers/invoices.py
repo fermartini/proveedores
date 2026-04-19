@@ -19,7 +19,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Query
 from fastapi.responses import JSONResponse
 
 from models.invoice import InvoiceResult, InvoiceDBPayload
@@ -44,7 +44,10 @@ router = APIRouter(prefix="/api", tags=["Facturas"])
         "Extrae QR, parsea datos, corrige dominio arca→afip y persiste en Firestore."
     ),
 )
-async def upload_invoices(files: List[UploadFile] = File(...)):
+async def upload_invoices(
+    files: List[UploadFile] = File(...),
+    empresa_cuit: str = Form(None)
+):
     """
     Endpoint principal: procesamiento masivo de facturas PDF.
 
@@ -84,7 +87,7 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
     # Procesamiento paralelo: cada archivo puede generar N facturas (multi-página)
     with ThreadPoolExecutor(max_workers=min(len(file_data), 8)) as executor:
         future_map = {
-            executor.submit(pdf_service.process_pdf, filename, content): filename
+            executor.submit(pdf_service.process_pdf, filename, content, empresa_cuit): filename
             for filename, content in file_data
         }
 
@@ -154,9 +157,9 @@ async def upload_invoices(files: List[UploadFile] = File(...)):
     summary="Obtener todas las facturas guardadas",
     description="Retorna el listado completo de facturas desde Firestore, ordenadas por fecha desc.",
 )
-async def get_invoices():
+async def get_invoices(empresa_cuit: str = Query(None)):
     """Retorna todas las facturas persistidas en Firestore."""
-    invoices = firebase_client.get_all_invoices()
+    invoices = firebase_client.get_all_invoices(empresa_cuit)
     return JSONResponse(content={"invoices": invoices, "total": len(invoices)})
 
 

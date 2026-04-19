@@ -33,14 +33,6 @@ TIPO_COMPROBANTE_MAP = {
     11: "C", 12: "ND C", 13: "NC C"
 }
  
-CUIT_JC = "30527990773"
- 
-
-
-
-
-
-
 def _decode_qr_data(qr_url: str) -> dict:
 
     """Extrae y decodifica el JSON en base64 de la URL del QR AFIP/ARCA."""
@@ -86,7 +78,7 @@ def _qr_data_es_completo(qr_data: dict) -> bool:
     return all(qr_data.get(campo) for campo in campos_obligatorios)
 
 
-def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
+def process_pdf(filename: str, file_bytes: bytes, user_cuit: str = None) -> List[InvoiceResult]:
     """
     Procesa un archivo (PDF o Imagen) y extrae todas las facturas únicas encontradas.
     """
@@ -102,7 +94,7 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
     if is_image:
         # Caso Imagen: Una sola página
         img = qr_service.render_first_page(file_bytes, is_pdf=False)
-        res = _process_single_page(filename, img, None, seen_qrs, seen_invoices)
+        res = _process_single_page(filename, img, None, seen_qrs, seen_invoices, user_cuit)
         if res:
             res.pdf_base64 = base64.b64encode(file_bytes).decode("utf-8")
             results.append(res)
@@ -124,7 +116,7 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
             page_img = images[i] if i < len(images) else None
             page_text = texts[i] if i < len(texts) else None
             
-            res = _process_single_page(filename, page_img, page_text, seen_qrs, seen_invoices)
+            res = _process_single_page(filename, page_img, page_text, seen_qrs, seen_invoices, user_cuit)
             
             if res:
                 # Asignar ID único basado en archivo y página
@@ -181,7 +173,8 @@ def _process_single_page(
     page_image, 
     page_text: Optional[str],
     seen_qrs: Set[str],
-    seen_invoices: Set[tuple]
+    seen_invoices: Set[tuple],
+    user_cuit: str = None
 ) -> Optional[InvoiceResult]:
     """
     Nucleo de procesamiento para una sola página (Imagen + Texto opcional).
@@ -281,18 +274,18 @@ def _process_single_page(
     cuit_receptor = parsed_fields.get("cuit_receptor")
     tipo_final = parsed_fields.get("tipo_factura", "B")
     
-    # Validar receptor (Jockey Club) — SOLO si los datos vienen del QR para evitar falsos positivos
+    # Validar receptor (Compañía logueada) — SOLO si los datos vienen del QR para evitar falsos positivos
     receptor_ok = True
-    if qr_data and qr_data.get("nroDocRec"):
+    if qr_data and qr_data.get("nroDocRec") and user_cuit:
         clean_receptor = str(qr_data.get("nroDocRec")).strip()
-        if clean_receptor and clean_receptor != CUIT_JC:
+        if clean_receptor and clean_receptor != user_cuit:
             receptor_ok = False
     
     datos_minimos_ok = bool(razon_social and str(razon_social).strip()) and (numero is not None)
 
     if not receptor_ok:
         status = "receptor_invalido"
-        error_detail = f"⚠️ NO ESTÁ A NOMBRE DEL JC - {filename}"
+        error_detail = f"⚠️ NO ESTÁ A NOMBRE DE TU EMPRESA - {filename}"
     elif "B" in str(tipo_final).upper():
         status = "tipo_invalido"
         error_detail = "Las facturas tipo B no están permitidas."
@@ -380,6 +373,7 @@ def _process_single_page(
         status=status,
         error_detail=error_detail,
         created_at=datetime.utcnow().isoformat(),
+        company_cuit=user_cuit,
     )
 
 

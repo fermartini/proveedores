@@ -27,7 +27,8 @@ class InvoiceResult(BaseModel):
     razon_social: Optional[str] = Field(None, description="Nombre o razón social del emisor")
 
     # --- Datos del receptor ---
-    cuit_receptor: Optional[str] = Field(None, description="CUIT del receptor (Jockey Club)")
+    cuit_receptor: Optional[str] = Field(None, description="CUIT del receptor")
+    company_cuit: Optional[str] = Field(None, description="CUIT de la empresa dueña de la sesión")
 
     # --- Datos del comprobante ---
 
@@ -106,4 +107,5 @@ class InvoiceDBPayload(BaseModel):
     moneda: str = Field("ARS")
     cotizacion: float = Field(1.0)
     es_credito: bool = Field(False)
+    company_cuit: Optional[str] = Field(None)
 

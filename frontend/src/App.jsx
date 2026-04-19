@@ -11,7 +11,9 @@ import DropZone      from "./components/DropZone";
 import InvoiceTable  from "./components/InvoiceTable";
 import DashboardPage from "./components/DashboardPage";
 import VerificationPage from "./components/VerificationPage";
+import LoginView from "./components/LoginView";
 import { useInvoices } from "./hooks/useInvoices";
+import { useAuth } from "./context/AuthContext";
 import { BASE_URL } from "./services/api";
 
 const pageVariants = {
@@ -159,9 +161,19 @@ function UploadTab() {
 }
 
 export default function App() {
+  return <AppContent />;
+}
+
+function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { stats } = useInvoices();
+  const { cuit } = useAuth();
+
+  // Si no hay CUIT (no está logueado), mostrar Login
+  if (!cuit) {
+    return <LoginView />;
+  }
 
   // Mapeo de rutas a tabs para el Navbar
   const activeTab = location.pathname.includes("dashboard") ? "dashboard" : "upload";
