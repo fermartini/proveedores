@@ -7,6 +7,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
+import { PDFDocument } from "pdf-lib";
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
   FileX, ChevronLeft, ChevronRight, Archive, CheckCircle2
@@ -86,9 +87,13 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
     const zip = new JSZip();
 
     try {
+      const mergedPdf = await PDFDocument.create();
+      let hasValidPages = false;
+
+      // Usamos el array original de invoices para mantener el orden
       const promises = invoices.map(async (inv) => {
         const blobUrl = fileMap[inv.id];
-        if (!blobUrl) return;
+        if (!blobUrl) return null;
 
         try {
           const response = await fetch(blobUrl);
@@ -102,12 +107,57 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
           
           const fileName = `${cleanName}_${pv}-${nro}.pdf`;
           zip.file(fileName, blob);
+
+          return { blob, inv };
         } catch (e) {
           console.error(`Error al procesar ${inv.filename}:`, e);
+          return null;
         }
       });
 
-      await Promise.all(promises);
+      const fetchedResults = await Promise.all(promises);
+
+      // Ahora procesamos en orden para el PDF UNIFICADO
+      for (const res of fetchedResults) {
+        if (!res) continue;
+        const { blob } = res;
+        const arrayBuffer = await blob.arrayBuffer();
+
+        try {
+          if (blob.type === "application/pdf") {
+            const pdf = await PDFDocument.load(arrayBuffer);
+            const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+            copiedPages.forEach((page) => mergedPdf.addPage(page));
+            hasValidPages = true;
+          } else if (blob.type.includes("image")) {
+            // Soporte para imágenes en el PDF unificado
+            let image;
+            if (blob.type.includes("png")) {
+              image = await mergedPdf.embedPng(arrayBuffer);
+            } else {
+              image = await mergedPdf.embedJpg(arrayBuffer);
+            }
+            
+            const page = mergedPdf.addPage();
+            const { width, height } = image.scale(1);
+            
+            // Ajustar imagen a la página (con margen)
+            const scale = Math.min(page.getWidth() / width, page.getHeight() / height) * 0.9;
+            const x = (page.getWidth() - width * scale) / 2;
+            const y = (page.getHeight() - height * scale) / 2;
+            
+            page.drawImage(image, { x, y, width: width * scale, height: height * scale });
+            hasValidPages = true;
+          }
+        } catch (err) {
+          console.error("Error al unir archivo al PDF:", err);
+        }
+      }
+
+      if (hasValidPages) {
+        const mergedPdfBytes = await mergedPdf.save();
+        zip.file("TODAS_LAS_FACTURAS_UNIFICADAS.pdf", mergedPdfBytes);
+      }
       const content = await zip.generateAsync({ type: "blob" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(content);
