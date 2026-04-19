@@ -60,6 +60,9 @@ class InvoiceResult(BaseModel):
     autorizada: bool = Field(default=True, description="¿Fue autorizada manualmente?")
     pagada: bool = Field(default=False, description="¿Fue pagada?")
 
+    # --- Archivo Adjunto ---
+    pdf_base64: Optional[str] = Field(None, description="PDF de 1 sola página codificado en base64 para reemplazar el multipágina original")
+
     # --- Estado del procesamiento ---
     status: str = Field(
         default="procesado",

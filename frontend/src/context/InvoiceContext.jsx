@@ -68,8 +68,23 @@ export const InvoiceProvider = ({ children }) => {
       files.forEach(f => { fileByFilename[f.name] = URL.createObjectURL(f); });
 
       const processedResults = results.map(res => {
-        const blobUrl = fileByFilename[res.filename];
-        if (blobUrl) { newFileMap[res.id] = blobUrl; }
+        if (res.pdf_base64) {
+          // Si el backend devolvió el PDF/Imagen específico pre-recortado
+          const isPdf = res.filename?.toLowerCase().endsWith('.pdf');
+          const mimeType = isPdf ? "application/pdf" : "image/jpeg";
+          const byteCharacters = atob(res.pdf_base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: mimeType });
+          newFileMap[res.id] = URL.createObjectURL(blob);
+        } else {
+          // Fallback a archivo original si no vino base64
+          const blobUrl = fileByFilename[res.filename];
+          if (blobUrl) { newFileMap[res.id] = blobUrl; }
+        }
         return res;
       });
 

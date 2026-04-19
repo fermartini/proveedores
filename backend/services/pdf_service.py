@@ -104,6 +104,7 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
         img = qr_service.render_first_page(file_bytes, is_pdf=False)
         res = _process_single_page(filename, img, None, seen_qrs, seen_invoices)
         if res:
+            res.pdf_base64 = base64.b64encode(file_bytes).decode("utf-8")
             results.append(res)
     else:
         # Caso PDF: Múltiples páginas
@@ -112,6 +113,13 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
         
         num_pages = max(len(images), len(texts))
         
+        import fitz
+        try:
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+        except Exception as exc:
+            logger.error(f"[PDF Service] Error abriendo PDF original con fitz: {exc}")
+            doc = None
+
         for i in range(num_pages):
             page_img = images[i] if i < len(images) else None
             page_text = texts[i] if i < len(texts) else None
@@ -146,7 +154,21 @@ def process_pdf(filename: str, file_bytes: bytes) -> List[InvoiceResult]:
                         logger.info(f"[PDF Service] Página {i+1} duplicada en {filename}, ignorando.")
                         continue
                 
+                # --- AQUÍ EXTRAEMOS LA PÁGINA INDIVIDUAL COMO UN NUEVO PDF ---
+                if doc is not None:
+                    try:
+                        single_page_doc = fitz.open()
+                        single_page_doc.insert_pdf(doc, from_page=i, to_page=i)
+                        pdf_bytes = single_page_doc.write()
+                        res.pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+                        single_page_doc.close()
+                    except Exception as exc:
+                        logger.error(f"[PDF Service] Error guardando página {i+1} como 1-page PDF: {exc}")
+                
                 results.append(res)
+        
+        if doc is not None:
+            doc.close()
 
 
 
