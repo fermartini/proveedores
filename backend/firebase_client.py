@@ -153,23 +153,28 @@ def _serialize_doc(doc_dict: dict) -> dict:
 
 def get_all_invoices(company_cuit: str = None) -> list:
     """
-    Obtiene todas las facturas de Firestore ordenadas por fecha de creación.
-    Si se provee un company_cuit, filtra por ese CUIT.
+    Obtiene todas las facturas de Firestore filtradas obligatoriamente por company_cuit.
+    Si no se provee un company_cuit, retorna una lista vacía para seguridad.
 
     Returns:
         Lista de dicts con los datos de cada factura, incluyendo su ID de documento.
     """
+    if not company_cuit:
+        logger.warning("[Firebase] Se intentó obtener facturas sin especificar company_cuit. Retornando vacío.")
+        return []
+
     db = _init_firebase()
     if db is None:
         return []
 
     try:
-        query = db.collection(COLLECTION_NAME).order_by("created_at", direction=firestore.Query.DESCENDING)
-        
-        if company_cuit:
-            query = query.where("company_cuit", "==", company_cuit)
-            
-        docs = query.stream()
+        # Consulta filtrada
+        docs = (
+            db.collection(COLLECTION_NAME)
+            .where("company_cuit", "==", company_cuit)
+            .order_by("created_at", direction=firestore.Query.DESCENDING)
+            .stream()
+        )
         return [{"id": doc.id, **_serialize_doc(doc.to_dict())} for doc in docs]
 
     except Exception as exc:
@@ -201,3 +206,48 @@ def update_invoice_field(doc_id: str, field: str, value) -> bool:
     except Exception as exc:
         logger.error(f"[Firebase] Error al actualizar factura {doc_id}: {exc}")
         return False
+
+
+def migrate_missing_company_cuits(default_cuit: str):
+    """
+    Busca todas las facturas que no tengan el campo 'company_cuit' 
+    y les asigna el CUIT por defecto proporcionado.
+    """
+    db = _init_firebase()
+    if db is None:
+        return 0
+
+    try:
+        # Firestore no permite query directa por falta de campo de forma eficiente en SDK básico
+        # Traemos todos y filtramos localmente o usamos query por NO existencia si es posible.
+        # Una forma común es traer todos y chequear si 'company_cuit' in doc_dict.
+        
+        docs = db.collection(COLLECTION_NAME).stream()
+        count = 0
+        
+        batch = db.batch()
+        batch_count = 0
+        
+        for doc in docs:
+            data = doc.to_dict()
+            if "company_cuit" not in data or not data["company_cuit"]:
+                doc_ref = db.collection(COLLECTION_NAME).document(doc.id)
+                batch.update(doc_ref, {"company_cuit": default_cuit})
+                count += 1
+                batch_count += 1
+                
+                # Firestore batch limit is 500
+                if batch_count >= 400:
+                    batch.commit()
+                    batch = db.batch()
+                    batch_count = 0
+        
+        if batch_count > 0:
+            batch.commit()
+            
+        logger.info(f"[Firebase] Migración completada. {count} documentos actualizados a CUIT: {default_cuit}")
+        return count
+
+    except Exception as exc:
+        logger.error(f"[Firebase] Error en migración: {exc}")
+        return 0

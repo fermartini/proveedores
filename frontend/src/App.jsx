@@ -35,6 +35,7 @@ function UploadTab() {
     removeInvoice,
     updateInvoice,
   } = useInvoices();
+  const { nombreEmpresa } = useAuth();
 
   const formatARSShort = (v) => {
     if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
@@ -60,8 +61,9 @@ function UploadTab() {
           Plataforma ERP · AFIP/ARCA
         </div>
         <h2 className="text-3xl font-bold text-white">
-          Procesamiento masivo de{" "}
-          <span className="brand-gradient-text">facturas PDF</span>
+          Bienvenido, <span className="text-brand-400">{nombreEmpresa}</span>.
+          <br />
+          Procesamiento de <span className="brand-gradient-text">facturas PDF</span>
         </h2>
         <p className="text-slate-400 max-w-xl text-sm leading-relaxed">
           Subí tus facturas electrónicas AFIP/ARCA y extraé automáticamente
