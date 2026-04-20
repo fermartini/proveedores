@@ -171,7 +171,7 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
   };
 
   const handleConfirmClick = () => {
-    const errorCount = invoices.filter(i => i.status !== "procesado").length;
+    const errorCount = invoices.filter(i => i.status !== "recibida").length;
     if (errorCount > 0) {
       const exclude = window.confirm(`Hay ${errorCount} facturas con errores. ¿Enviar solo las válidas?`);
       if (exclude) onConfirm("valid_only");

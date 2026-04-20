@@ -66,8 +66,8 @@ class InvoiceResult(BaseModel):
 
     # --- Estado del procesamiento ---
     status: str = Field(
-        default="procesado",
-        description="Estado del procesamiento: 'procesado' | 'error' | 'sin_qr'"
+        default="recibida",
+        description="Estado del procesamiento: 'recibida' | 'error' | 'sin_qr'"
     )
     error_detail: Optional[str] = Field(
         None,

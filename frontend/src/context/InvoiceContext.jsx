@@ -106,7 +106,7 @@ export const InvoiceProvider = ({ children }) => {
   // 3. Confirm
   const handleConfirm = useCallback(async (mode = "valid_only") => {
     setUploading(true);
-    const toSubmit = mode === "all" ? invoices : invoices.filter(i => i.status === "procesado");
+    const toSubmit = mode === "all" ? invoices : invoices.filter(i => i.status === "recibida");
     
     const payloads = toSubmit.map(inv => ({
       cuit_emisor: inv.cuit ? String(inv.cuit) : null,
