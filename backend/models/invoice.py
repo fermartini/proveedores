@@ -107,5 +107,7 @@ class InvoiceDBPayload(BaseModel):
     moneda: str = Field("ARS")
     cotizacion: float = Field(1.0)
     es_credito: bool = Field(False)
+    cuit_receptor: Optional[str] = Field(None)
+    comentario: Optional[str] = Field(None)
     company_cuit: Optional[str] = Field(None)
 
