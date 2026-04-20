@@ -25,27 +25,36 @@ export const AuthProvider = ({ children }) => {
   const [cuit, setCuit] = useState("");
   const [nombreEmpresa, setNombreEmpresa] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isFetchingFirestore, setIsFetchingFirestore] = useState(false);
 
   // Escuchar cambios de autenticación
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        // Buscar datos de la empresa en Firestore
-        const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        if (userDocSnap.exists()) {
-          const data = userDocSnap.data();
-          setCuit(data.company_cuit || "");
-          setNombreEmpresa(data.company_name || "");
-        } else {
-          setCuit("");
-          setNombreEmpresa("");
+        setIsFetchingFirestore(true);
+        try {
+          // Buscar datos de la empresa en Firestore
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            setCuit(data.company_cuit || "");
+            setNombreEmpresa(data.company_name || "");
+          } else {
+            setCuit("");
+            setNombreEmpresa("");
+          }
+        } catch (err) {
+          console.error("Error al buscar perfil:", err);
+        } finally {
+          setIsFetchingFirestore(false);
         }
       } else {
         setCuit("");
         setNombreEmpresa("");
+        setIsFetchingFirestore(false);
       }
       setLoading(false);
     });
@@ -93,6 +102,7 @@ export const AuthProvider = ({ children }) => {
     cuit,
     nombreEmpresa,
     loading,
+    isFetchingFirestore,
     loginWithGoogle,
     loginWithEmail,
     signupWithEmail,

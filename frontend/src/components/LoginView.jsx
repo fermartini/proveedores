@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, ArrowRight, Mail, Lock, UserPlus, LogOut, Globe } from "lucide-react";
+import { Building2, ArrowRight, Mail, Lock, UserPlus, LogOut, Globe, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginView() {
@@ -11,7 +11,8 @@ export default function LoginView() {
     loginWithEmail, 
     signupWithEmail, 
     saveCompanyData,
-    logOut 
+    logOut,
+    isFetchingFirestore 
   } = useAuth();
   
   const [isLoginActive, setIsLoginActive] = useState(true);
@@ -113,8 +114,19 @@ export default function LoginView() {
           </div>
         </div>
 
-        {/* Paso 1: Auth Base */}
-        {!currentUser ? (
+        {/* Paso 2: Auth Base / Loading / Onboarding */}
+        {isFetchingFirestore ? (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="py-12 flex flex-col items-center gap-4"
+          >
+            <Loader2 className="w-10 h-10 text-brand-400 animate-spin" />
+            <p className="text-slate-400 text-sm animate-pulse">
+              Consultando tu perfil...
+            </p>
+          </motion.div>
+        ) : !currentUser ? (
           <>
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-white tracking-tight mb-2">
