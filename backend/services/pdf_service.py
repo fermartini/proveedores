@@ -182,7 +182,7 @@ def _process_single_page(
     """
     parsed_fields = {}
     qr_url = None
-    status = "procesado"
+    status = "recibida"
     error_detail = None
     used_llm = False
 
@@ -291,7 +291,7 @@ def _process_single_page(
         error_detail = "Las facturas tipo B no están permitidas."
     elif not datos_minimos_ok:
         if qr_url and qr_url.lower().startswith("http"):
-            status = "procesado" # Si tiene QR pero no pudo leer texto/IA, se marca como procesado igual (el confirm fallará luego si faltan datos)
+            status = "recibida" # Si tiene QR pero no pudo leer texto/IA, se marca como recibida igual
         else:
             status = "sin_qr" if not used_llm else "error"
             if status == "error":
@@ -334,7 +334,7 @@ def _process_single_page(
         if iva: iva = -abs(iva)
         if otros_tributos: otros_tributos = -abs(otros_tributos)
 
-    if used_llm and not error_detail and status == "procesado":
+    if used_llm and not error_detail and status == "recibida":
         error_detail = "⚡ Datos extraídos mediante IA (Gemini 1.5 Flash)."
 
     # --- Mejora Fluida: Búsqueda de Razón Social por CUIT ---
@@ -347,9 +347,9 @@ def _process_single_page(
             parsed_fields["razon_social"] = public_name
             info_msg = "🔍 Nombre recuperado vía consulta pública por CUIT."
             error_detail = f"{error_detail} | {info_msg}" if error_detail else info_msg
-            # Marcar como procesado si ya tenemos nombre y nro
+            # Marcar como recibida si ya tenemos nombre y nro
             if numero is not None:
-                status = "procesado"
+                status = "recibida"
 
     return InvoiceResult(
         id=f"{filename}-{datetime.utcnow().timestamp()}", # ID más robusto

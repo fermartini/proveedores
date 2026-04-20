@@ -58,7 +58,7 @@ class InvoiceResult(BaseModel):
         default="Muebles y Útiles",
         description="Cuenta contable asignada por defecto para carga en ERP"
     )
-    autorizada: bool = Field(default=True, description="¿Fue autorizada manualmente?")
+    autorizada: bool = Field(default=False, description="¿Fue autorizada manualmente?")
     pagada: bool = Field(default=False, description="¿Fue pagada?")
 
     # --- Archivo Adjunto ---
@@ -102,7 +102,7 @@ class InvoiceDBPayload(BaseModel):
     url_qr_afip: Optional[str] = Field(None)
     descripcion: Optional[str] = Field(None)
     cuenta_contable_sugerida: str = Field("Muebles y Útiles")
-    estado_autorizacion: bool = Field(True)
+    estado_autorizacion: bool = Field(False)
     estado_pago: bool = Field(False)
     moneda: str = Field("ARS")
     cotizacion: float = Field(1.0)

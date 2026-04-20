@@ -13,8 +13,14 @@
 import { CheckCircle, AlertTriangle, XCircle, Clock, ShieldOff } from "lucide-react";
 
 const STATUS_CONFIG = {
-  procesado: {
-    label: "Procesado",
+  recibida: {
+    label: "Recibida",
+    icon: CheckCircle,
+    classes: "bg-sky-500/10 text-sky-400 border border-sky-500/30",
+    dotClass: "bg-sky-400",
+  },
+  pagada: {
+    label: "Pagada",
     icon: CheckCircle,
     classes: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30",
     dotClass: "bg-emerald-400",
