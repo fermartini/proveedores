@@ -268,8 +268,8 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
       {/* Estado */}
       <td className="px-4 py-3 whitespace-nowrap">
         <StatusBadge 
-          status={pagada ? "pagada" : status} 
-          onClick={status === "recibida" || status === "sin_qr" ? handleTogglePago : null} 
+          status={status} 
+          onClick={null} 
         />
       </td>
 
