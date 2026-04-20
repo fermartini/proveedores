@@ -238,3 +238,19 @@ async def update_invoice(doc_id: str, payload: dict):
         raise HTTPException(status_code=500, detail="Error al actualizar el documento.")
 
     return {"success": True, "doc_id": doc_id, "field": field, "value": value}
+
+
+@router.post("/migrate-legacy-data", summary="MIGRA LAS FACTURAS ANTIGUAS AL JOCKEY CLUB")
+async def migrate_legacy_data():
+    """
+    Endpoint temporal para asignar el CUIT 30527990773 a todas las facturas
+    que no tienen el campo company_cuit.
+    """
+    cuit_jc = "30527990773"
+    actualizados = firebase_client.migrate_missing_company_cuits(cuit_jc)
+    
+    return {
+        "success": True,
+        "message": f"Se han actualizado {actualizados} facturas al CUIT {cuit_jc}",
+        "count": actualizados
+    }
