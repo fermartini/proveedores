@@ -240,7 +240,7 @@ async def update_invoice(doc_id: str, payload: dict):
     return {"success": True, "doc_id": doc_id, "field": field, "value": value}
 
 
-@router.post("/migrate-legacy-data", summary="MIGRA LAS FACTURAS ANTIGUAS AL JOCKEY CLUB")
+@router.get("/migrate-legacy-data", summary="MIGRA LAS FACTURAS ANTIGUAS AL JOCKEY CLUB")
 async def migrate_legacy_data():
     """
     Endpoint temporal para asignar el CUIT 30527990773 a todas las facturas
