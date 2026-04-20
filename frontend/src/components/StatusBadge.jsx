@@ -15,7 +15,7 @@ import { CheckCircle, AlertTriangle, XCircle, Clock, ShieldOff } from "lucide-re
 const STATUS_CONFIG = {
   recibida: {
     label: "Recibida",
-    icon: Clock,
+    icon: CheckCircle,
     classes: "bg-sky-500/10 text-sky-400 border border-sky-500/30",
     dotClass: "bg-sky-400",
   },
