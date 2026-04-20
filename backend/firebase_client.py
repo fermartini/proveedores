@@ -110,9 +110,9 @@ def save_invoice(invoice_dict: dict) -> Optional[str]:
 
     try:
         # Mapear campos del payload al esquema de Firestore
-        # estado_autorizacion → autorizada (default False: las facturas entran como recibidas, no autorizadas)
+        # estado_autorizacion → autorizada (default True: las facturas entran autorizadas por defecto)
         # estado_pago        → pagada     (default False: aún no fueron abonadas)
-        invoice_dict["autorizada"] = invoice_dict.pop("estado_autorizacion", False)
+        invoice_dict["autorizada"] = invoice_dict.pop("estado_autorizacion", True)
         invoice_dict["pagada"]     = invoice_dict.pop("estado_pago", False)
         invoice_dict["created_at"] = firestore.SERVER_TIMESTAMP
 
