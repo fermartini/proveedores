@@ -52,26 +52,28 @@ export default function PDFViewer({ pdfUrl, filename }) {
         )}
       </div>
 
-      <style jsx>{`
-        @media print {
-          .no-print {
-            display: none !important;
+      <style>
+        {`
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+            .printable-content {
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100vw !important;
+              height: 100vh !important;
+              z-index: 9999 !important;
+              background: white !important;
+            }
+            iframe {
+              width: 100% !important;
+              height: 100% !important;
+            }
           }
-          .printable-content {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            z-index: 9999 !important;
-            background: white !important;
-          }
-          iframe {
-            width: 100% !important;
-            height: 100% !important;
-          }
-        }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 }

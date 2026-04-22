@@ -34,21 +34,23 @@ export default function VerificationPage() {
   const pdfUrl = fileMap[id] || null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col h-full overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-main flex flex-col h-full overflow-hidden">
       
       {/* Mini Header de Navegación */}
-      <div className="h-12 bg-slate-900 border-b border-white text-white flex items-center px-4 justify-between no-print">
+      <div className="h-16 bg-surface border-b border-base text-main flex items-center px-8 justify-between no-print shadow-sm">
         <button 
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors uppercase tracking-widest"
+          className="flex items-center gap-3 text-xs font-black text-dim hover:text-brand-primary transition-all uppercase tracking-[0.2em]"
         >
-          <ArrowLeft size={14} />
-          Volver a la lista
+          <ArrowLeft size={16} />
+          Volver al panel
         </button>
 
-        <div className="flex items-center gap-2">
-            <ShieldCheck size={14} className="text-emerald-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Modo Verificación Segura</span>
+        <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <ShieldCheck size={16} className="text-emerald-500" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">Protocolo de Verificación Segura</span>
         </div>
 
         <button 
@@ -56,18 +58,18 @@ export default function VerificationPage() {
             updateInvoice(id, { pagada: true });
             navigate(-1);
           }}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-[10px] font-bold transition-all uppercase"
+          className="btn-success px-6 shadow-lg shadow-emerald-500/20"
         >
-          <Save size={12} />
-          Confirmar y Cerrar
+          <Save size={16} />
+          Finalizar Auditoría
         </button>
       </div>
 
       {/* Contenedor Split-Screen */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         
         {/* Lado Izquierdo: PDF */}
-        <section className="flex-1 h-full border-r border-slate-800">
+        <section className="flex-1 min-h-[40vh] lg:h-full border-b lg:border-b-0 lg:border-r border-base bg-surface/30">
            <PDFViewer 
              pdfUrl={pdfUrl} 
              filename={invoice?.filename} 
@@ -75,19 +77,21 @@ export default function VerificationPage() {
         </section>
 
         {/* Lado Derecho: Datos */}
-        <section className="w-[480px] h-full flex-shrink-0 bg-slate-900 no-print shadow-2xl z-10">
+        <section className="w-full lg:w-[520px] h-[60vh] lg:h-full flex-shrink-0 bg-surface no-print lg:shadow-[-20px_0_40px_rgba(0,0,0,0.1)] z-10">
           <VerificationPanel invoice={invoice} />
         </section>
 
       </div>
 
-      <style jsx>{`
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-        }
-      `}</style>
+      <style>
+        {`
+          @media print {
+              .no-print {
+                  display: none !important;
+              }
+          }
+        `}
+      </style>
     </div>
   );
 }

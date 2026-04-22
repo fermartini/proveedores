@@ -21,20 +21,20 @@ const PAGE_SIZE = 20;
 // ---------------------------------------------------------------------------
 // StatCard mini
 // ---------------------------------------------------------------------------
-function MiniStat({ icon, label, value, sub, color = "text-brand-400", bg = "bg-brand-500/10" }) {
+function MiniStat({ icon, label, value, sub, color = "text-brand-primary", bg = "bg-indigo-500/10" }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-4 bg-slate-800/60 border border-slate-700/50 rounded-2xl px-5 py-4"
+      className="glass-card flex items-center gap-5 px-6 py-5 border-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300"
     >
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${bg}`}>
-        <span className={color}>{icon}</span>
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${bg} ${color}`}>
+        {icon}
       </div>
       <div>
-        <p className="text-xs text-slate-500 font-medium">{label}</p>
-        <p className="text-lg font-bold text-white leading-tight">{value}</p>
-        {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
+        <p className="text-[10px] text-dim font-black uppercase tracking-[0.15em] mb-1">{label}</p>
+        <p className="text-xl font-black text-main leading-none">{value}</p>
+        {sub && <p className="text-xs text-dim mt-2 font-bold opacity-80">{sub}</p>}
       </div>
     </motion.div>
   );
@@ -120,12 +120,12 @@ function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
     : "—";
 
   const rowClass = isInvalidReceptor
-    ? "bg-red-600/20 hover:bg-red-600/30"
+    ? "bg-red-500/10 hover:bg-red-500/20"
     : (invoice.pagada
-        ? "bg-emerald-500/10 hover:bg-emerald-600/15 border-l-4 border-l-emerald-500"
+        ? "bg-[#00ff9d]/20 hover:bg-[#00ff9d]/30 shadow-[inset_0_0_20px_rgba(0,255,157,0.05)]"
         : (invoice.es_credito 
             ? "bg-violet-500/10 hover:bg-violet-500/20" 
-            : (invoice.moneda === "USD" ? "bg-blue-500/10 hover:bg-blue-500/20" : "hover:bg-slate-800/40")
+            : (invoice.moneda === "USD" ? "bg-indigo-500/10 hover:bg-indigo-500/20" : "hover:bg-surface-hover")
           )
       );
 
@@ -135,27 +135,27 @@ function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 8 }}
-      className={`border-b border-slate-700/30 transition-colors group ${rowClass}`}
+      className={`border-b border-base transition-all duration-200 group ${rowClass}`}
     >
       {/* Proveedor */}
-      <td className="px-4 py-3">
+      <td className="px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            invoice.es_credito ? "bg-red-500/20" : (invoice.moneda === "USD" ? "bg-blue-500/20" : "bg-slate-700/60")
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border ${
+            invoice.es_credito ? "bg-red-500/10 border-red-500/20" : (invoice.moneda === "USD" ? "bg-indigo-500/10 border-indigo-500/20" : "bg-surface border-base")
           }`}>
-            <Building2 size={13} className={invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-slate-400")} />
+            <Building2 size={16} className={invoice.es_credito ? "text-red-500" : (invoice.moneda === "USD" ? "text-brand-primary" : "text-dim")} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 group/copy">
-              <p className={`text-sm font-medium truncate max-w-[150px] ${
-                invoice.es_credito ? "text-red-300" : (invoice.moneda === "USD" ? "text-blue-300" : "text-white")
+              <p className={`text-sm font-black truncate max-w-[180px] ${
+                invoice.es_credito ? "text-red-500" : (invoice.moneda === "USD" ? "text-indigo-600 dark:text-indigo-400" : "text-main")
               }`}>
-                {invoice.razon_social ?? <span className="text-slate-500 italic">Sin nombre</span>}
+                {invoice.razon_social ?? <span className="text-dim italic font-medium">Sin identificar</span>}
               </p>
               <CopyBtn value={invoice.razon_social} label="Razón Social" small />
             </div>
-            <div className="flex items-center gap-2">
-              <p className="text-[10px] text-slate-500 font-mono mt-0.5">{invoice.cuit_emisor ?? "—"}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-[10px] text-dim font-black uppercase tracking-widest">{invoice.cuit_emisor ?? "—"}</p>
               <CopyBtn value={invoice.cuit_emisor} label="CUIT" small />
             </div>
           </div>
@@ -163,15 +163,15 @@ function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
       </td>
 
       {/* Comprobante */}
-      <td className="px-4 py-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-              invoice.es_credito ? "bg-red-500/20 text-red-300" : "bg-slate-700/60 text-slate-300"
+      <td className="px-6 py-4">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter ${
+              invoice.es_credito ? "bg-red-500/10 text-red-500 border border-red-500/20" : "bg-surface border border-base text-muted"
             }`}>
               {invoice.tipo_factura || "FAC"}
             </span>
-            <p className="text-[11px] text-slate-400 font-mono">
+            <p className="text-xs text-main font-black tracking-tight">
               {invoice.punto_venta ? `${String(invoice.punto_venta).padStart(4, "0")}-` : ""}
               {invoice.numero_comprobante
                 ? String(invoice.numero_comprobante).padStart(8, "0")
@@ -184,21 +184,21 @@ function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
       </td>
 
       {/* Fecha Emision */}
-      <td className="px-4 py-3 whitespace-nowrap">
-        <span className="text-xs text-slate-500">{invoice.fecha_emision ?? "—"}</span>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className="text-xs font-bold text-dim uppercase">{invoice.fecha_emision ?? "—"}</span>
       </td>
 
       {/* Importe */}
-      <td className="px-4 py-3 text-right">
-        <div className="flex items-center justify-end gap-2 group/total">
+      <td className="px-6 py-4 text-right">
+        <div className="flex items-center justify-end gap-3 group/total">
           <div className="flex flex-col items-end">
-            <span className={`text-sm font-bold font-mono ${
-              invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-white")
+            <span className={`text-sm font-black ${
+              invoice.es_credito ? "text-red-500" : (invoice.moneda === "USD" ? "text-indigo-600 dark:text-indigo-400" : "text-main")
             }`}>
-              {invoice.total != null ? formatARS(invoice.total) : <span className="text-slate-600">—</span>}
+              {invoice.total != null ? formatARS(invoice.total) : <span className="text-dim">—</span>}
             </span>
             {invoice.moneda === "USD" && (
-              <span className="text-[9px] text-blue-500/80 font-medium">USD Conv.</span>
+              <span className="text-[9px] text-indigo-500 font-black uppercase tracking-tighter mt-0.5">Dólares</span>
             )}
           </div>
           <CopyBtn value={invoice.total} label="Importe" />
@@ -206,22 +206,22 @@ function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
       </td>
 
       {/* Recibido (Fecha Procesamiento) */}
-      <td className="px-4 py-3 text-center">
-        <div className="flex flex-col">
-          <span className="text-[11px] font-bold text-slate-400">{fechaRecibido}</span>
-          <span className="text-[9px] text-slate-600 uppercase tracking-tighter">Carga</span>
+      <td className="px-6 py-4 text-center">
+        <div className="flex flex-col items-center">
+          <span className="text-[11px] font-black text-main">{fechaRecibido}</span>
+          <span className="text-[9px] text-dim font-bold uppercase tracking-tighter">Sincro</span>
         </div>
       </td>
 
       {/* Nota / Comentario */}
-      <td className="px-4 py-3 text-center">
+      <td className="px-6 py-4 text-center">
         <button
           onClick={() => onComment(invoice)}
           className={`
-            p-2 rounded-xl transition-all active:scale-90
+            w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 border shadow-sm
             ${hasComment 
-              ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30" 
-              : "bg-slate-800 text-slate-600 hover:text-slate-400"
+              ? "bg-[#00ff9d]/20 text-[#00ff9d] border-[#00ff9d]/40 shadow-[0_0_15px_rgba(0,255,157,0.1)] hover:bg-[#00ff9d]/30" 
+              : "bg-surface text-dim border-base hover:text-main hover:border-brand-primary"
             }
           `}
           title={hasComment ? "Ver/Editar comentario" : "Agregar comentario"}
@@ -231,49 +231,48 @@ function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
       </td>
 
       {/* Estado Autorizada */}
-      <td className="px-4 py-3 text-center">
+      <td className="px-6 py-4 text-center">
         <ToggleBtn
           value={invoice.autorizada}
-          onLabel="AUTORIZ."
-          offLabel="PEND."
+          onLabel="AUTORIZ"
+          offLabel="PEND"
           onClick={() => onToggle(invoice.id, "autorizada", invoice.autorizada)}
           disabled={isDisabled}
-          onColor="bg-violet-500/20 text-violet-300 border border-violet-500/40"
-          offColor="bg-red-500/15 text-red-400 border border-red-500/40 hover:bg-red-500/25"
+          onColor="bg-violet-500 text-white shadow-lg shadow-violet-500/20 border-none"
+          offColor="bg-surface border-base text-dim hover:border-red-500/50"
         />
       </td>
 
       {/* Estado Pagada */}
-      <td className="px-4 py-3 text-center">
+      <td className="px-6 py-4 text-center">
         <ToggleBtn
           value={invoice.pagada}
-          onLabel="PAGO"
-          offLabel="NOPAG"
+          onLabel="PAGA"
+          offLabel="IMPAGA"
           onClick={() => onToggle(invoice.id, "pagada", invoice.pagada)}
           disabled={isDisabled}
-          onColor="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-          offColor="bg-violet-500/15 text-violet-400 border border-violet-500/40 hover:bg-violet-500/25"
+          onColor="bg-[#00ff9d] text-black shadow-lg shadow-[#00ff9d]/20 border-none"
+          offColor="bg-surface border-base text-dim hover:border-violet-500/50"
         />
       </td>
-
-      {/* Link QR / Copiar */}
-      <td className="px-4 py-3 text-center">
-        <div className="flex items-center justify-center gap-1.5">
-          {invoice.url_qr_afip && (
+      <td className="hidden lg:table-cell px-6 py-4 text-center">
+        <div className="flex items-center justify-center gap-2">
+          {invoice.url_qr_afip ? (
             <>
               <a
                 href={invoice.url_qr_afip}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1.5 rounded-lg bg-slate-800 text-brand-500 hover:bg-brand-500 hover:text-white transition-all"
+                className="w-8 h-8 rounded-lg bg-surface border border-base text-brand-primary flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm"
                 title="Abrir en AFIP"
               >
                 <QrCode size={14} />
               </a>
               <CopyBtn value={invoice.url_qr_afip} label="Link AFIP" />
             </>
+          ) : (
+            <span className="text-xs text-dim">—</span>
           )}
-          {!invoice.url_qr_afip && <span className="text-xs text-slate-700">—</span>}
         </div>
       </td>
     </motion.tr>
@@ -437,196 +436,192 @@ export default function DashboardPage() {
   const monthLabel = displayDate.toLocaleDateString("es-AR", { month: 'long', year: 'numeric' });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
 
       {/* ---- Header ---- */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+      <div className="flex flex-col md:flex-row md:items-end gap-6 justify-between bg-surface/30 p-8 rounded-[32px] border border-base">
         <div>
-          <h2 className="text-2xl font-bold text-white">
-            Dashboard de <span className="brand-gradient-text">Facturas</span>
-          </h2>
-          <p className="text-slate-400 text-sm mt-1">
-            {filtered.length} visible{filtered.length !== 1 ? "s" : ""} de {invoices.length} total
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 ring-4 ring-indigo-500/5">
+               <TrendingUp size={20} className="text-white" />
+            </div>
+            <h1 className="text-3xl font-black text-main tracking-tight">
+              Resumen Corporativo
+            </h1>
+          </div>
+          <p className="text-dim text-sm font-bold ml-1.5 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {filtered.length} comprobantes listados en esta sesión
           </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-all shadow-lg shadow-emerald-500/10"
+            className="btn-success px-6 shadow-xl"
           >
-            <Download size={14} />
-            EXPORTAR EXCEL
+            <Download size={18} />
+            Exportar Auditoría
           </button>
           
           <button
             onClick={fetchInvoices}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700/50
-                       text-sm text-slate-300 hover:text-white hover:bg-slate-700 transition-all
-                       disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-ghost bg-surface/50 border-base px-6 shadow-sm"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            Actualizar
+            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            Sincronizar DB
           </button>
         </div>
       </div>
 
-      {/* ---- Selector de Mes / Vista ---- */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center bg-slate-800/40 p-1.5 rounded-2xl border border-slate-700/50">
-        <div className="flex p-1 bg-slate-900/60 rounded-xl border border-slate-800">
+      {/* ---- Stats Cards ---- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MiniStat
+          icon={<TrendingUp size={22} />}
+          label={viewMode === 'month' ? "Volumen Mensual" : "Volumen Histórico"}
+          value={filtered.length}
+          sub={`${formatARSShort(filtered.reduce((s,i) => s + (i.total ?? 0), 0))} operados`}
+          color="text-indigo-500"
+          bg="bg-indigo-500/10"
+        />
+        <MiniStat
+          icon={<Clock size={22} />}
+          label="Deuda Pendiente"
+          value={filtered.filter(i => !i.pagada).length}
+          sub="Facturas sin saldar"
+          color="text-amber-500"
+          bg="bg-amber-500/10"
+        />
+        <MiniStat
+          icon={<CheckCircle2 size={22} />}
+          label="Facturas Pagadas"
+          value={filtered.filter(i => i.pagada).length}
+          sub="Operaciones ejecutadas"
+          color="text-[#00ff9d]"
+          bg="bg-[#00ff9d]/10"
+        />
+        <MiniStat
+          icon={<DollarSign size={22} />}
+          label="Autorizaciones"
+          value={filtered.filter(i => i.autorizada).length}
+          sub="Verificadas para pago"
+          color="text-violet-500"
+          bg="bg-violet-500/10"
+        />
+      </div>
+
+      {/* ---- Control Bar (Mes + Filtros) ---- */}
+      <div className="flex flex-col lg:flex-row gap-6 items-center">
+        <div className="flex p-1.5 bg-surface border border-base rounded-2xl shadow-sm w-full lg:w-auto">
           <button
             onClick={() => setViewMode("month")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === "month" ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+            className={`flex-1 lg:px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${
+              viewMode === "month" ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-dim hover:text-main"
             }`}
           >
-            VISTA MENSUAL
+            Vista Mensual
           </button>
           <button
             onClick={() => setViewMode("all")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === "all" ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+            className={`flex-1 lg:px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${
+              viewMode === "all" ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-dim hover:text-main"
             }`}
           >
-            VER TODAS
+            Vista Histórica
           </button>
         </div>
 
         {viewMode === "month" && (
-          <div className="flex items-center gap-4 ml-auto sm:mr-4">
+          <div className="flex items-center gap-4 bg-surface px-4 py-2 border border-base rounded-2xl shadow-sm">
             <button
               onClick={() => changeMonth(-1)}
-              className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-hover text-dim hover:text-main transition-all"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={20} />
             </button>
-            <div className="flex items-center gap-2 px-3 py-1 bg-slate-900/40 rounded-lg border border-slate-800">
-              <Calendar size={14} className="text-brand-400" />
-              <span className="text-xs font-bold text-white uppercase min-w-[120px] text-center">
+            <div className="flex items-center gap-3 min-w-[160px] justify-center">
+              <Calendar size={18} className="text-indigo-500" />
+              <span className="text-sm font-black text-main uppercase tracking-tighter">
                 {monthLabel}
               </span>
             </div>
             <button
               onClick={() => changeMonth(1)}
-              className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-hover text-dim hover:text-main transition-all"
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={20} />
             </button>
           </div>
         )}
-      </div>
 
-      {/* ---- Stats Cards ---- */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MiniStat
-          icon={<TrendingUp size={18} />}
-          label={viewMode === 'month' ? "Facturas Mes" : "Total Histórico"}
-          value={filtered.length}
-          sub={`${formatARSShort(filtered.reduce((s,i) => s + (i.total ?? 0), 0))} total`}
-          color="text-brand-400"
-          bg="bg-brand-500/10"
-        />
-        <MiniStat
-          icon={<Clock size={18} />}
-          label="Pendientes"
-          value={filtered.filter(i => !i.pagada).length}
-          sub="Sin pagar"
-          color="text-amber-400"
-          bg="bg-amber-500/10"
-        />
-        <MiniStat
-          icon={<CheckCircle2 size={18} />}
-          label="Abonadas"
-          value={filtered.filter(i => i.pagada).length}
-          sub="Saldadas"
-          color="text-emerald-400"
-          bg="bg-emerald-500/10"
-        />
-        <MiniStat
-          icon={<DollarSign size={18} />}
-          label="Autorizadas"
-          value={filtered.filter(i => i.autorizada).length}
-          sub="Listas para pago"
-          color="text-violet-400"
-          bg="bg-violet-500/10"
-        />
-      </div>
-
-      {/* ---- Error ---- */}
-      {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-red-400">
-          {error}
-        </div>
-      )}
-
-      {/* ---- Filtros + Buscador ---- */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-        {/* Filtros rápidos */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap justify-center lg:ml-auto">
           {FILTERS.map((f) => (
             <button
               key={f.id}
               onClick={() => { setFilter(f.id); setPage(1); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
                 filter === f.id
-                  ? "bg-brand-600 text-white shadow-lg shadow-brand-500/20"
-                  : "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700/50"
+                  ? "bg-main text-white border-main shadow-lg"
+                  : "bg-surface text-dim border-base hover:border-brand-primary/50"
               }`}
             >
-              <Filter size={10} />
               {f.label}
             </button>
           ))}
         </div>
-
-        {/* Buscadores */}
-        <div className="flex gap-2 w-full sm:w-auto ml-auto">
-          <div className="relative w-full sm:w-64">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-            <input
-              id="dashboard-search"
-              type="text"
-              placeholder="Buscar proveedor, CUIT..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="input-base pl-8 w-full text-sm"
-            />
-          </div>
-
-          <div className="relative w-full sm:w-40">
-            <DollarSign size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-            <input
-              id="dashboard-amount-search"
-              type="text"
-              placeholder="Monto..."
-              value={amountSearch}
-              onChange={(e) => { setAmountSearch(e.target.value); setPage(1); }}
-              className="input-base pl-8 w-full text-sm"
-            />
-          </div>
-        </div>
       </div>
 
-      {/* ---- Tabla ---- */}
+      {/* ---- Tabla Central ---- */}
       <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="px-8 py-6 border-b border-base bg-surface-hover/30 flex flex-col md:flex-row gap-4 items-center justify-between">
+           <div className="flex items-center gap-4 w-full md:w-auto">
+              <div className="relative flex-1 md:w-80 group">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-brand-primary" />
+                <input
+                  type="text"
+                  placeholder="Empresa, CUIT, factura..."
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="input-base pl-12 bg-surface"
+                />
+              </div>
+
+              <div className="relative w-32 group">
+                <DollarSign size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-brand-primary" />
+                <input
+                  type="text"
+                  placeholder="Monto"
+                  value={amountSearch}
+                  onChange={(e) => { setAmountSearch(e.target.value); setPage(1); }}
+                  className="input-base pl-10 bg-surface"
+                />
+              </div>
+           </div>
+           
+           <div className="text-right">
+              <p className="text-[10px] font-black text-dim uppercase tracking-[0.2em] mb-1">Carga de Datos</p>
+              <p className="text-sm font-black text-main">Sincronización en Tiempo Real</p>
+           </div>
+        </div>
+
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-700/50 bg-slate-800/30">
+              <tr className="border-b border-base bg-surface">
                 {COLS.map((col) => (
                   <th
                     key={col.key}
                     onClick={() => handleSort(col.key)}
                     className={`
-                      px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500
+                      px-6 py-4 text-[10px] font-black uppercase tracking-[0.1em] text-muted
                       ${col.align === "right" ? "text-right" : ""}
                       ${col.align === "center" ? "text-center" : ""}
-                      ${col.sortable ? "cursor-pointer hover:text-slate-300 select-none" : ""}
-                      transition-colors duration-150
+                      ${col.sortable ? "cursor-pointer hover:text-brand-primary select-none group/th" : ""}
+                      transition-colors duration-200
                     `}
                   >
-                    <span className="inline-flex items-center gap-1">
+                    <span className={`inline-flex items-center gap-2 ${col.align === "right" ? "justify-end" : ""} ${col.align === "center" ? "justify-center" : ""}`}>
                       {col.label}
                       {col.sortable && <SortIcon col={col.key} sortKey={sortKey} sortDir={sortDir} />}
                     </span>
@@ -635,13 +630,13 @@ export default function DashboardPage() {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-base">
               {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-slate-700/20">
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
                     {COLS.map((col) => (
-                      <td key={col.key} className="px-4 py-3">
-                        <div className="h-4 bg-slate-700/40 rounded animate-pulse w-3/4" />
+                      <td key={col.key} className="px-6 py-5">
+                        <div className="h-4 bg-surface-hover rounded-lg w-full" />
                       </td>
                     ))}
                   </tr>
@@ -660,14 +655,19 @@ export default function DashboardPage() {
                     ))
                   ) : (
                     <motion.tr key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      <td colSpan={COLS.length} className="px-4 py-20 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-14 h-14 rounded-2xl bg-slate-800/60 flex items-center justify-center">
-                            <FileX size={24} className="text-slate-600" />
+                      <td colSpan={COLS.length} className="px-6 py-32 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-20 h-20 rounded-3xl bg-surface border-2 border-dashed border-base flex items-center justify-center">
+                            <FileX size={32} className="text-dim" />
                           </div>
-                          <p className="text-sm text-slate-500">
-                            {search || filter !== "all" ? "Sin resultados" : "No hay facturas en este periodo"}
-                          </p>
+                          <div className="max-w-xs">
+                             <p className="text-lg font-black text-main mb-1">
+                               Sin registros encontrados
+                             </p>
+                             <p className="text-sm text-dim font-medium">
+                               Intentá ajustando los filtros o el rango de fecha para encontrar lo que buscás.
+                             </p>
+                          </div>
                         </div>
                       </td>
                     </motion.tr>
@@ -680,26 +680,44 @@ export default function DashboardPage() {
 
         {/* Paginación */}
         {totalPages > 1 && (
-          <div className="px-6 py-3 border-t border-slate-700/50 flex items-center justify-between">
-            <span className="text-xs text-slate-500">
-              Página {page} de {totalPages}
+          <div className="px-8 py-6 border-t border-base bg-surface-hover/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-[10px] font-black text-dim uppercase tracking-[0.2em]">
+               Mostrando página {page} de {totalPages}
             </span>
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => Math.abs(p - page) <= 2)
-                .map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                      p === page
-                        ? "bg-brand-600 text-white"
-                        : "text-slate-400 hover:bg-slate-700 hover:text-white"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page === 1}
+                className="w-10 h-10 rounded-xl bg-surface border border-base flex items-center justify-center hover:border-brand-primary disabled:opacity-50 transition-all text-dim hover:text-brand-primary shadow-sm"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              
+              <div className="flex gap-2">
+                 {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => Math.abs(p - page) <= 2)
+                  .map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`w-10 h-10 rounded-xl text-xs font-black transition-all shadow-sm ${
+                        p === page
+                          ? "bg-indigo-500 text-white shadow-indigo-500/20"
+                          : "bg-surface border border-base text-dim hover:border-brand-primary hover:text-brand-primary"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+              </div>
+
+              <button 
+                onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={page === totalPages}
+                className="w-10 h-10 rounded-xl bg-surface border border-base flex items-center justify-center hover:border-brand-primary disabled:opacity-50 transition-all text-dim hover:text-brand-primary shadow-sm"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           </div>
         )}

@@ -1,192 +1,234 @@
-/*
- * index.css
- * ---------
- * Estilos globales + directivas Tailwind CSS.
- * 
- * Estructura:
- * 1. Directivas Tailwind (base, components, utilities)
- * 2. Variables CSS personalizadas
- * 3. Estilos base para el dark mode
- * 4. Componentes reutilizables (glassmorphism, gradientes)
- * 5. Scrollbar personalizada
- */
-
-/* ============================================================
-   1. TAILWIND DIRECTIVES
-   ============================================================ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   2. VARIABLES CSS
-   ============================================================ */
 :root {
-  --color-bg:           #0f172a;
-  --color-surface:      #1e293b;
-  --color-border:       #334155;
-  --color-brand:        #3b82f6;
-  --color-brand-light:  #60a5fa;
-  --color-brand-glow:   rgba(59, 130, 246, 0.15);
-  --color-success:      #10b981;
-  --color-warning:      #f59e0b;
-  --color-error:        #ef4444;
+  /* Common / Brand Palette */
+  --brand-primary:      #6366f1; /* Indigo 500 */
+  --brand-secondary:    #8b5cf6; /* Violet 500 */
+  --brand-gradient:     linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  
+  --color-success:      #00f59b; /* Brighter Neon Green */
+  --color-warning:      #ffbb33;
+  --color-error:        #ff4d4d;
+  --color-info:         #4d7cff;
 
-  /* Transición global uniforme */
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transitions & Shadows */
+  --transition-base:    300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-sm:          0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md:          0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:          0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl:          0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-brand:       0 0 20px rgba(99, 102, 241, 0.2);
 }
 
-/* ============================================================
-   3. BASE STYLES — DARK MODE
-   ============================================================ */
+/* --- DARK THEME (DEFAULT) --- */
+:root[data-theme="dark"] {
+  --color-bg:           #020617; /* Slate 950 Deep */
+  --color-surface:      #0f172a; /* Slate 900 */
+  --color-surface-hover:#1e293b; /* Slate 800 */
+  --color-border:       #1e293b; /* Slate 800 */
+  --color-text-main:    #f8fafc; /* Slate 50 */
+  --color-text-muted:   #94a3b8; /* Slate 400 */
+  --color-text-dim:     #64748b; /* Slate 500 */
+  --glass-bg:           rgba(15, 23, 42, 0.8);
+  --glass-border:       rgba(255, 255, 255, 0.05);
+  --input-bg:           #0f172a;
+}
+
+/* --- LIGHT THEME --- */
+:root[data-theme="light"] {
+  --color-bg:           #f8fafc; /* Slate 50 */
+  --color-surface:      #ffffff; /* White */
+  --color-surface-hover:#f1f5f9; /* Slate 100 */
+  --color-border:       #e2e8f0; /* Slate 200 */
+  --color-text-main:    #0f172a; /* Slate 900 */
+  --color-text-muted:   #475569; /* Slate 600 */
+  --color-text-dim:     #94a3b8; /* Slate 400 */
+  --glass-bg:           rgba(255, 255, 255, 0.8);
+  --glass-border:       rgba(0, 0, 0, 0.05);
+  --input-bg:           #f1f5f9;
+}
+
 @layer base {
   *, *::before, *::after {
-    box-sizing: border-box;
+    @apply border-[var(--color-border)];
+    transition: background-color var(--transition-base), border-color var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
   }
 
   html {
     scroll-behavior: smooth;
-    font-size: 16px;
   }
 
   body {
-    @apply bg-[#0f172a] text-slate-100 font-sans antialiased;
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+    @apply font-sans antialiased selection:bg-indigo-500 selection:text-white;
     min-height: 100vh;
-    /* Sutil textura de ruido para evitar el look "plano" */
-    background-image:
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.08), transparent),
-      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(139, 92, 246, 0.05), transparent);
-    background-attachment: fixed;
+    overflow-x: hidden;
+  }
+  
+  /* Abstract background for premium feel */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+    background-image: 
+      radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.02) 0%, transparent 60%);
   }
 
-  /* Tipografía base */
+  @media print {
+      .no-print {
+          display: none !important;
+      }
+  }
+
+  [data-theme="dark"] body::before {
+    background-image: 
+      radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
+  }
+
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
+    @apply font-black tracking-tight;
+    color: var(--color-text-main);
   }
 
-  /* Focus accesible */
   :focus-visible {
-    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-[#0f172a];
+    @apply outline-none ring-2 ring-indigo-500/50 ring-offset-2;
+    ring-offset-color: var(--color-bg);
   }
 }
 
-/* ============================================================
-   4. COMPONENTES REUTILIZABLES
-   ============================================================ */
 @layer components {
-
-  /* --- Glass Card --- */
+  /* Glassmorphism Card System */
   .glass-card {
-    @apply rounded-2xl border border-slate-700/50;
-    background: rgba(30, 41, 59, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    @apply rounded-[24px] shadow-sm;
+    transition: all var(--transition-base);
   }
 
-  /* --- Gradiente de marca --- */
-  .brand-gradient {
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  .glass-card:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.1);
   }
 
+  /* Brand Typography */
   .brand-gradient-text {
-    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    background: var(--brand-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    display: inline-block;
   }
 
-  /* --- Botón primario --- */
+  /* Universal Buttons */
   .btn-primary {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm
-           text-white transition-all duration-200
-           hover:scale-[1.02] active:scale-[0.98];
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    @apply inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest
+           text-white transition-all duration-300 shadow-xl
+           hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:scale-100;
+    background: var(--brand-gradient);
+    box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
   }
 
-  .btn-primary:hover {
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+  .btn-primary:not(:disabled):hover {
+    box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.6);
+    filter: brightness(1.1) saturate(1.1);
   }
 
-  /* --- Botón secundario/ghost --- */
+  .btn-success {
+    @apply inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest
+           text-white transition-all duration-300 shadow-xl
+           hover:scale-[1.03] active:scale-[0.97] bg-emerald-600;
+    box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.3);
+  }
+
+  .btn-success:hover {
+    @apply bg-emerald-500;
+    box-shadow: 0 15px 30px -5px rgba(16, 185, 129, 0.4);
+  }
+
   .btn-ghost {
-    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm
-           text-slate-300 border border-slate-700 hover:border-slate-500
-           hover:text-white hover:bg-slate-700/50 transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider
+           transition-all duration-200 border;
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+    background: transparent;
   }
 
-  /* --- Input --- */
+  .btn-ghost:hover {
+    color: var(--color-text-main);
+    border-color: var(--brand-primary);
+    background: var(--color-surface-hover);
+    @apply shadow-sm;
+  }
+
+  /* Form Elements */
   .input-base {
-    @apply w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700
-           text-slate-100 placeholder-slate-500 text-sm
-           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
-           transition-all duration-200;
+    background-color: var(--input-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-main);
+    @apply w-full px-5 py-3.5 rounded-2xl text-[13px] font-bold
+           placeholder:text-slate-500 placeholder:font-medium
+           focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500
+           transition-all duration-300;
   }
 
-  /* --- Badge de estado --- */
-  .badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+  .badge-success { 
+    @apply bg-[#00ff9d]/40 text-black border border-[#00ff9d]/60 shadow-[0_0_25px_rgba(0,255,157,0.3)];
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  .badge-success:hover {
+    @apply bg-[#00ff9d]/70 text-black border-[#00ff9d] shadow-[0_0_35px_rgba(0,255,157,0.6)];
+    filter: brightness(1.25);
+  }
+  .badge-error { @apply bg-red-500/10 text-red-500 border border-red-500/20; }
+  .badge-warning { @apply bg-amber-500/10 text-amber-500 border border-amber-500/20; }
+  .badge-info { @apply bg-indigo-500/10 text-indigo-500 border border-indigo-500/20; }
+
+  /* Responsive Table */
+  .table-container {
+    @apply w-full overflow-x-auto block;
+  }
+  table {
+    @apply w-full min-w-[600px];
   }
 
-  /* --- Separador con gradiente --- */
-  .divider-gradient {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #334155, transparent);
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-
-  /* --- Skeleton loader --- */
-  .skeleton {
-    @apply rounded-lg bg-slate-800;
-    background: linear-gradient(
-      90deg,
-      #1e293b 25%,
-      #334155 50%,
-      #1e293b 75%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite linear;
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    @apply rounded-full;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-primary);
   }
 }
 
-/* ============================================================
-   5. SCROLLBAR PERSONALIZADA (Webkit)
-   ============================================================ */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0f172a;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-/* ============================================================
-   6. UTILIDADES CUSTOM
-   ============================================================ */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  .bg-main { background-color: var(--color-bg); }
+  .bg-surface { background-color: var(--color-surface); }
+  .bg-surface-hover { background-color: var(--color-surface-hover); }
+  
+  .text-main { color: var(--color-text-main); }
+  .text-muted { color: var(--color-text-muted); }
+  .text-dim { color: var(--color-text-dim); }
+  .text-brand-primary { color: var(--brand-primary); }
+  
+  .border-base { border-color: var(--color-border); }
 
-  /* Glow azul para elementos destacados */
-  .glow-brand {
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
-  }
-
-  /* Truncar con ... en tabla */
-  .truncate-cell {
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+  .bg-brand-gradient { background: var(--brand-gradient); }
 }

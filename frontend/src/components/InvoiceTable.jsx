@@ -189,33 +189,48 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
 
   return (
     <div className="glass-card overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-700/50 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+      <div className="px-8 py-6 border-b border-base flex flex-col md:flex-row md:items-center gap-4 justify-between bg-surface/30">
         <div>
-          <h2 className="text-base font-semibold text-white">Facturas procesadas</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {invoices.length} registro{invoices.length !== 1 ? "s" : ""} · {filtered.length} filtrados
+          <h2 className="text-xl font-black text-main flex items-center gap-2">
+            Facturas procesadas
+            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 uppercase tracking-tighter">
+               Sesión Activa
+            </span>
+          </h2>
+          <p className="text-xs text-dim mt-1 font-bold">
+            {invoices.length} archivos totales · <span className="text-main">{filtered.length}</span> resultados filtrados
           </p>
         </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+        <div className="relative w-full md:w-80 group">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim group-focus-within:text-brand-primary transition-colors pointer-events-none" />
           <input
             type="text"
-            placeholder="Buscar proveedor, CUIT..."
+            placeholder="Filtrar por proveedor, CUIT o #..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="input-base pl-8"
+            className="input-base pl-12 bg-surface hover:bg-surface/80"
           />
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-700/50 bg-slate-800/30">
+            <tr className="border-b border-base bg-surface">
               {COLUMNS.map((col) => (
-                <th key={col.key} onClick={() => col.sortable && handleSort(col.key)} className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 ${col.align === "right" ? "text-right" : ""} ${col.align === "center" ? "text-center" : ""} ${col.sortable ? "cursor-pointer hover:text-slate-300" : ""}`}>
-                  <span className="inline-flex items-center gap-1">
+                <th 
+                  key={col.key} 
+                  onClick={() => col.sortable && handleSort(col.key)} 
+                  className={`
+                    px-6 py-4 text-[10px] font-black uppercase tracking-[0.1em] text-muted
+                    ${col.align === "right" ? "text-right" : ""} 
+                    ${col.align === "center" ? "text-center" : ""} 
+                    ${col.sortable ? "cursor-pointer hover:text-brand-primary group/th" : ""}
+                    transition-colors duration-200
+                  `}
+                >
+                  <span className={`inline-flex items-center gap-2 ${col.align === "right" ? "justify-end" : ""} ${col.align === "center" ? "justify-center" : ""}`}>
                     {col.label}
                     {col.sortable && <SortIcon column={col.key} sortKey={sortKey} sortDir={sortDir} />}
                   </span>
@@ -223,16 +238,32 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-base">
             <AnimatePresence mode="popLayout">
               {paginated.length > 0 ? (
                 paginated.map((invoice, idx) => (
-                  <InvoiceRow key={invoice.id} invoice={invoice} index={idx} onRemove={() => onRemove(invoice.id)} onUpdate={(data) => onUpdate(invoice.id, data)} />
+                  <InvoiceRow 
+                    key={invoice.id} 
+                    invoice={invoice} 
+                    index={idx} 
+                    onRemove={() => onRemove(invoice.id)} 
+                    onUpdate={(data) => onUpdate(invoice.id, data)} 
+                  />
                 ))
               ) : (
                 <motion.tr key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <td colSpan={COLUMNS.length} className="px-4 py-20 text-center text-slate-500">
-                    {search ? "Sin resultados" : "No hay facturas procesadas"}
+                  <td colSpan={COLUMNS.length} className="px-6 py-32 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                       <div className="w-16 h-16 rounded-full bg-surface border border-base flex items-center justify-center text-dim">
+                          <Search size={24} />
+                       </div>
+                       <p className="text-base font-black text-main">
+                          {search ? "Sin resultados para tu búsqueda" : "No detectamos facturas"}
+                       </p>
+                       <p className="text-sm text-dim font-medium max-w-xs mx-auto">
+                          Subí tus comprobantes arriba para verlos listados aquí automáticamente.
+                       </p>
+                    </div>
                   </td>
                 </motion.tr>
               )}
@@ -240,9 +271,13 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
           </tbody>
           {filtered.length > 0 && (
             <tfoot>
-              <tr className="border-t border-slate-700/50 bg-slate-800/30">
-                <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-slate-400">TOTALES ({filtered.length})</td>
-                <td className="px-4 py-3 text-right text-xs font-bold text-brand-400 font-mono">{formatARS(totals.total)}</td>
+              <tr className="border-t-2 border-base bg-surface-hover/30">
+                <td colSpan={7} className="px-6 py-5 text-sm font-black text-muted uppercase tracking-tighter">
+                   Monto Total de los Comprobantes Listados
+                </td>
+                <td className="px-6 py-5 text-right text-lg font-black brand-gradient-text">
+                  {formatARS(totals.total)}
+                </td>
                 <td colSpan={3} />
               </tr>
             </tfoot>
@@ -250,26 +285,26 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
         </table>
       </div>
 
-      <div className="px-6 py-4 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex gap-2">
+      <div className="px-8 py-6 border-t border-base flex flex-col sm:flex-row items-center justify-between gap-6 bg-surface/50">
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={handleDownloadZip}
             disabled={isZipping || invoices.length === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white text-sm font-bold transition-all disabled:opacity-50"
+            className="btn-ghost"
           >
-            <Archive size={16} className={isZipping ? "animate-pulse" : ""} />
-            {isZipping ? "Generando ZIP..." : "Bajar LOTE (ZIP Renombrado)"}
+            <Archive size={18} className={isZipping ? "animate-pulse" : ""} />
+            {isZipping ? "Empaquetando..." : "Descargar Lote ZIP"}
           </button>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-4 w-full sm:w-auto">
           <button
             onClick={handleConfirmClick}
             disabled={isConfirming || invoices.length === 0}
-            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-lg shadow-brand-500/20"
+            className="btn-primary w-full sm:min-w-[240px]"
           >
-            <CheckCircle2 size={16} />
-            {isConfirming ? "Guardando en DB..." : "Confirmar a Base de Datos"}
+            <CheckCircle2 size={18} />
+            {isConfirming ? "Guardando cambios..." : "Guardar sesión en Firestore"}
           </button>
         </div>
       </div>

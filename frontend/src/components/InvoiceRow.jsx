@@ -248,12 +248,12 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
   const isInvalidReceptor = status === "receptor_invalido";
   
   const rowClass = isInvalidReceptor
-    ? "bg-red-600/90 hover:bg-red-700 transition-all duration-300"
+    ? "bg-red-500 text-white"
     : (pagada 
-        ? "bg-emerald-500/10 hover:bg-emerald-600/15 border-l-4 border-l-emerald-500" 
+        ? "bg-[#00ff9d]/20 hover:bg-[#00ff9d]/30 shadow-[inset_0_0_20px_rgba(0,255,157,0.05)]" 
         : (invoice.es_credito 
-            ? "bg-violet-500/10 hover:bg-violet-500/20 shadow-inner" 
-            : (invoice.moneda === "USD" ? "bg-blue-500/10 hover:bg-blue-500/20 shadow-inner" : "hover:bg-slate-800/30")
+            ? "bg-violet-500/5 hover:bg-violet-500/10" 
+            : (invoice.moneda === "USD" ? "bg-indigo-500/5 hover:bg-indigo-500/10" : "hover:bg-surface-hover")
           )
       );
 
@@ -263,10 +263,10 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.04 }}
-      className={`border-b border-slate-700/50 transition-colors duration-150 group ${rowClass}`}
+      className={`border-b border-base transition-all duration-200 group ${rowClass}`}
     >
       {/* Estado */}
-      <td className="px-4 py-3 whitespace-nowrap">
+      <td className="px-1 py-2">
         <StatusBadge 
           status={pagada ? "pagada" : status} 
           onClick={status === "recibida" || status === "sin_qr" ? handleTogglePago : null} 
@@ -274,57 +274,44 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
       </td>
 
       {/* Razón Social + CUIT */}
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+      <td className="px-1 py-2 min-w-[120px]">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => navigate(`/factura/${invoice.id}/verificacion`)}
               title="Abrir vista de verificación dividida"
-              className={`p-1.5 rounded-lg transition-all hover:scale-110 active:scale-95 ${
-                isInvalidReceptor ? "bg-white/20 text-white" : "bg-brand-500/10 text-brand-400 hover:bg-brand-500 hover:text-white"
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${
+                isInvalidReceptor ? "bg-white/20 text-white" : "bg-surface border border-base text-muted hover:text-brand-primary hover:border-brand-primary/50 shadow-sm"
               }`}
             >
-              <Eye size={14} />
+              <Eye size={12} />
             </button>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-              isInvalidReceptor ? "bg-white/20" : (invoice.es_credito ? "bg-violet-500/20" : (invoice.moneda === "USD" ? "bg-blue-500/20" : "bg-slate-700/60"))
-            }`}>
-              <Building2 size={13} className={isInvalidReceptor ? "text-white" : (invoice.es_credito ? "text-violet-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-slate-400"))} />
-            </div>
           </div>
           <div className="min-w-0">
             {isErrorRow || isInvalidReceptor ? (
-              // Fila rechazada o receptor inválido: mostrar el archivo y el motivo
               <>
-                <p className={`text-xs font-mono truncate max-w-[200px] ${isInvalidReceptor ? "text-white/80" : "text-slate-500"}`}>
+                <p className={`text-[8px] font-bold uppercase tracking-wider truncate max-w-[100px] ${isInvalidReceptor ? "text-white/70" : "text-dim"}`}>
                   {filename}
                 </p>
                 <ClickToCopyText value={razon_social}>
-                  <p className={`text-sm font-bold truncate max-w-[180px] hover:underline transition-colors ${isInvalidReceptor ? "text-white" : "text-red-400"}`}>
+                  <p className={`text-[10px] font-black leading-tight break-words transition-colors ${isInvalidReceptor ? "text-white" : "text-red-500"}`}>
                     {razon_social ?? "Proveedor no identificado"}
                   </p>
                 </ClickToCopyText>
               </>
             ) : (
-              // Fila normal
               <>
                 <ClickToCopyText value={razon_social}>
-                  <p className={`text-sm font-medium truncate max-w-[180px] hover:text-brand-400 hover:underline transition-colors decoration-brand-400/50 underline-offset-2 ${
-                    invoice.es_credito ? "text-violet-300" : (invoice.moneda === "USD" ? "text-blue-300" : "text-slate-200")
+                  <p className={`text-[10px] font-black leading-tight break-words hover:text-brand-primary transition-colors ${
+                    invoice.es_credito ? "text-violet-600 dark:text-violet-400" : (invoice.moneda === "USD" ? "text-indigo-600 dark:text-indigo-400" : "text-main")
                   }`}>
-                    {razon_social ?? <span className="text-slate-600 hover:no-underline">No extraído</span>}
+                    {razon_social ?? <span className="text-dim italic font-medium">No identificado</span>}
                   </p>
                 </ClickToCopyText>
                 {cuit && (
-                  <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                  <p className={`text-[8px] font-bold mt-0.5 uppercase tracking-tighter ${isInvalidReceptor ? "text-white/60" : "text-dim"}`}>
                     {cuit.replace(/(\d{2})(\d{8})(\d)/, "$1-$2-$3")}
                   </p>
-                )}
-                
-                {isDuplicateInDB && (
-                  <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-[9px] font-black text-red-400 uppercase tracking-tighter animate-pulse">
-                    ⚠️ YA REGISTRADA EN DB
-                  </div>
                 )}
               </>
             )}
@@ -333,37 +320,36 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
       </td>
 
       {/* Tipo | Número Separado */}
-      <td className="px-4 py-3 whitespace-nowrap">
-        <div className="flex items-center gap-2">
+      <td className="px-1 py-2 whitespace-nowrap">
+        <div className="flex items-center gap-1">
           {tipo_factura && (
-            <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${
-              isInvalidReceptor ? "bg-white/20 text-white" : (invoice.es_credito ? "bg-violet-500/20 text-violet-300" : "bg-slate-700/60 text-slate-300")
+            <span className={`px-1 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tight ${
+              isInvalidReceptor ? "bg-white/20 text-white" : (invoice.es_credito ? "bg-violet-500/10 text-violet-500 border border-violet-500/20" : "bg-surface border border-base text-muted shadow-sm")
             }`}>
               {tipo_factura}
             </span>
           )}
 
-          <div className={`text-xs font-mono flex items-center ${isInvalidReceptor ? "text-white/90" : "text-slate-400"}`}>
+          <div className={`text-[9px] font-black flex items-center tracking-tighter ${isInvalidReceptor ? "text-white" : "text-main"}`}>
             <ClickToCopyText value={punto_venta ? String(punto_venta).padStart(4, "0") : ""}>
-              <span className="hover:text-brand-400 transition-colors font-bold">{punto_venta ? String(punto_venta).padStart(4, "0") : "—"}</span>
+              <span className="hover:text-brand-primary transition-colors">{punto_venta ? String(punto_venta).padStart(4, "0") : "—"}</span>
             </ClickToCopyText>
-            <span className="mx-0.5 opacity-50">-</span>
+            <span className="mx-0.5 opacity-20">—</span>
             <ClickToCopyText value={numero ? String(numero).padStart(8, "0") : ""}>
-              <span className="hover:text-brand-400 transition-colors font-bold">{numero ? String(numero).padStart(8, "0") : "—"}</span>
+              <span className="hover:text-brand-primary transition-colors">{numero ? String(numero).padStart(8, "0") : "—"}</span>
             </ClickToCopyText>
           </div>
         </div>
       </td>
 
       {isInvalidReceptor ? (
-        // MODO ULTRA ROJO: Aviso gigante ocultando el resto de las celdas de datos (excepto eliminar)
-        <td colSpan={6} className="px-4 py-3 text-center">
-            <div className="flex flex-col items-center justify-center animate-pulse">
-              <p className="text-white font-black text-xl tracking-tighter uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-                ⚠️ NO ESTÁ A NOMBRE DEL JC ⚠️
+        <td colSpan={11} className="px-6 py-2 text-center">
+            <div className="flex flex-col items-center justify-center py-4">
+              <p className="text-white font-black text-2xl tracking-tighter uppercase italic">
+                ⚠️ RECEPTOR INVÁLIDO ⚠️
               </p>
-              <p className="text-white/80 text-[11px] font-mono mt-1 font-bold">
-                ARCHIVO: {filename}
+              <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest mt-1">
+                La factura no pertenece a Jockey Club
               </p>
             </div>
         </td>
@@ -371,44 +357,43 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
 
         <>
           {/* Fecha */}
-          <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-400">
+          <td className="px-1 py-1 lg:py-2 whitespace-nowrap text-[9px] font-bold text-dim uppercase">
             <ClickToCopyText value={fecha}>
-              <span className="hover:text-brand-400 transition-colors">{fecha ?? "—"}</span>
+              <span className="hover:text-brand-primary transition-colors">{fecha ?? "—"}</span>
             </ClickToCopyText>
           </td>
 
           {/* NETO (Calculado) */}
-          <td className="px-4 py-3 whitespace-nowrap text-right">
+          <td className="px-1 py-1 lg:py-2 whitespace-nowrap text-right">
             <ClickToCopyText value={importe_neto?.toString()}>
-              <span className="text-xs font-mono text-white font-medium hover:text-brand-400 transition-colors">
+              <span className="text-[9px] font-black text-main hover:text-brand-primary transition-colors">
                 {formatARS(importe_neto)}
               </span>
             </ClickToCopyText>
           </td>
 
-          {/* IVA con Selector Vertical */}
-          <td className="px-4 py-3 whitespace-nowrap text-right">
-            <div className="flex items-center justify-end gap-2">
+          {/* IVA */}
+          <td className="px-1 py-1 lg:py-2 whitespace-nowrap text-right">
+            <div className="flex items-center justify-end gap-1 group/iva">
               <ClickToCopyText value={iva?.toString()}>
-                <span className="text-xs font-mono text-white font-bold order-1 min-w-[70px] hover:text-brand-400 transition-colors">
+                <span className="text-[9px] font-black text-main order-1 min-w-[50px] hover:text-brand-primary transition-colors">
                   {formatARS(iva)}
                 </span>
               </ClickToCopyText>
               
               {tipo_factura === "A" && (
-                <div className="flex flex-col gap-0.5 order-2">
-                  {[0.27, 0.21, 0.105].map(rate => (
+                <div className="flex flex-col gap-0.5 order-2 opacity-0 group-hover/iva:opacity-100 transition-opacity">
+                  {[0.21, 0.105].map(rate => (
                     <button
                       key={rate}
                       onClick={() => handleRecalculate(otros_tributos, rate)}
-                      title={`Calcular al ${(rate * 100).toFixed(1)}%`}
-                      className={`text-[8px] px-1 py-0 rounded border leading-tight ${
+                      className={`text-[7px] px-0.5 py-0.5 rounded font-black border leading-none transition-all ${
                         ivaRate === rate 
-                          ? "bg-brand-500 border-brand-400 text-white" 
-                          : "bg-slate-800/80 border-slate-700 text-slate-500 hover:text-slate-300"
+                          ? "bg-brand-primary border-brand-primary text-white shadow-lg shadow-indigo-500/20" 
+                          : "bg-surface border-base text-dim hover:text-main hover:border-brand-primary"
                       }`}
                     >
-                      {(rate * 100).toFixed(0)}%
+                      {(rate * 100).toFixed(1)}%
                     </button>
                   ))}
                 </div>
@@ -416,20 +401,19 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
             </div>
           </td>
 
-          {/* Otros / Ret (Botón + Verde) */}
-          <td className="px-4 py-3 whitespace-nowrap text-right">
-            <div className="flex flex-col items-end gap-1">
+          {/* Otros / Ret */}
+          <td className="px-1 py-1 lg:py-2 whitespace-nowrap text-right">
+            <div className="flex flex-col items-end gap-0.5">
               {!showRetInput && (!otros_tributos || otros_tributos === 0) ? (
                 <button
                   onClick={() => setShowRetInput(true)}
-                  className="w-7 h-7 flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-110"
-                  title="Agregar Retenciones / Percepciones"
+                  className="w-6 h-6 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105 shadow-sm border border-emerald-500/20"
                 >
-                  <span className="text-lg font-bold">+</span>
+                  <span className="text-sm font-black">+</span>
                 </button>
               ) : (
-                <div className="flex items-center gap-1 bg-slate-900/50 border border-slate-700 rounded px-1.5 py-0.5 focus-within:border-brand-500 transition-colors">
-                  <span className="text-brand-500 text-[10px] font-bold">+</span>
+                <div className="flex items-center gap-1 bg-surface border border-emerald-500 px-1 py-0.5 rounded-lg shadow-lg focus-within:scale-105 transition-transform">
+                  <span className="text-emerald-500 text-[10px] font-black">+</span>
                   <input
                     type="number"
                     step="0.01"
@@ -438,46 +422,36 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
                     value={otros_tributos || ""}
                     onChange={(e) => handleRecalculate(e.target.value)}
                     onBlur={() => { if(!otros_tributos) setShowRetInput(false); }}
-                    className="w-16 bg-transparent border-none text-right text-xs font-mono text-brand-300 outline-none p-0"
+                    className="w-12 bg-transparent border-none text-right text-[10px] font-black text-emerald-600 dark:text-emerald-400 outline-none p-0"
                   />
                 </div>
               )}
-              <span className="text-[8px] text-slate-600 uppercase font-bold tracking-tighter">Ret | Perc</span>
             </div>
           </td>
 
           {/* Total */}
-          <td className="px-4 py-3 whitespace-nowrap text-right">
-            <div className="flex flex-col items-end">
-              <ClickToCopyText value={total?.toString()}>
-                <span className={`inline-block text-sm font-semibold font-mono hover:text-brand-400 transition-colors ${
-                  invoice.es_credito ? "text-red-400" : (invoice.moneda === "USD" ? "text-blue-400" : "text-white")
-                }`}>
-                  {formatARS(total)}
-                </span>
-              </ClickToCopyText>
-              {invoice.moneda === "USD" && (
-                <span className="text-[10px] text-blue-500/90 mt-0.5 font-medium">
-                  USD (Conv. a ARS)
-                </span>
-              )}
-            </div>
+          <td className="px-1 py-1 lg:py-2 whitespace-nowrap text-right flex-1">
+            <ClickToCopyText value={total?.toString()}>
+              <span className={`inline-block text-[11px] font-black hover:text-brand-primary transition-colors ${
+                invoice.es_credito ? "text-red-500" : (invoice.moneda === "USD" ? "text-brand-primary" : "text-main")
+              }`}>
+                {formatARS(total)}
+              </span>
+            </ClickToCopyText>
           </td>
 
           {/* Cuenta Contable */}
-          <td className="px-4 py-3 whitespace-nowrap">
-            <span className="text-xs text-slate-500 bg-slate-800/60 px-2 py-1 rounded-lg">
-              {cuenta_contable ?? "—"}
+          <td className="px-1 py-1 lg:py-2 whitespace-nowrap">
+            <span className="text-[8px] font-black text-white bg-indigo-500 px-1.5 py-0.5 rounded-md uppercase tracking-tighter">
+              {cuenta_contable ?? "SIN CTA"}
             </span>
           </td>
         </>
       )}
 
       {!isInvalidReceptor && (
-        <td className="px-4 py-3 whitespace-nowrap">
-          <div className="flex items-center gap-0.5">
-
-            {/* Copiar Link AFIP — o mostrar sentinel si no hay URL */}
+        <td className="px-2 py-4 whitespace-nowrap">
+          <div className="flex items-center gap-1">
             {qrIsUrl ? (
               <CopyButton
                 id={`copy-qr-${cae ?? filename}`}
@@ -486,37 +460,19 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
                 icon={ExternalLink}
               />
             ) : (
-              // Sentinel visual: icono + texto descriptivo, sin botón de copia
               <div
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px]"
+                className="flex items-center justify-center p-1 rounded-md bg-surface border border-base text-dim"
                 title={qr_link ?? "Sin QR"}
               >
-                {qrSentinel && (() => {
-                  const SentinelIcon = qrSentinel.icon;
-                  return (
-                    <>
-                      <SentinelIcon size={11} className={qrSentinel.color} />
-                      <span className={qrSentinel.color}>{qrSentinel.label}</span>
-                    </>
-                  );
-                })()}
+                {qrSentinel && <qrSentinel.icon size={11} />}
               </div>
             )}
 
-            {/* Copiar CAE */}
             <CopyButton
               id={`copy-cae-${cae ?? filename}`}
               value={cae}
               label="CAE"
               icon={FileText}
-            />
-
-            {/* Copiar Descripción */}
-            <CopyButton
-              id={`copy-desc-${cae ?? filename}`}
-              value={descripcion}
-              label="Descripción"
-              icon={Copy}
             />
           </div>
         </td>
@@ -524,13 +480,13 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
 
 
       {/* Botón Eliminar */}
-      <td className="px-4 py-3 text-center">
+      <td className="px-2 py-4 text-center">
         <button
           onClick={onRemove}
-          className="text-red-500/50 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors tooltip-trigger"
-          title="Eliminar de la lista"
+          className="w-8 h-8 flex items-center justify-center text-dim hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-200"
+          title="Eliminar"
         >
-          <Trash2 size={15} />
+          <Trash2 size={16} />
         </button>
       </td>
     </motion.tr>

@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, QrCode as QrIcon } from "lucide-react";
+import { Copy, Check, QrCode as QrIcon, ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 function CopyButton({ value, label }) {
@@ -30,10 +30,10 @@ function CopyButton({ value, label }) {
       onClick={handleCopy}
       title={`Copiar ${label}`}
       className={`
-        p-2 rounded-xl transition-all duration-200
+        w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 border shadow-sm
         ${copied 
-          ? "bg-emerald-500/20 text-emerald-400" 
-          : "bg-slate-800 text-slate-500 hover:text-brand-400 hover:bg-slate-700"
+          ? "bg-emerald-500 border-emerald-500 text-white shadow-emerald-500/20" 
+          : "bg-surface border-base text-dim hover:text-brand-primary hover:border-brand-primary"
         }
       `}
     >
@@ -42,7 +42,7 @@ function CopyButton({ value, label }) {
           <motion.div
             key="check"
             initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1.5, opacity: 1 }}
+            animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.5, opacity: 0 }}
           >
             <Check size={18} />
@@ -64,12 +64,12 @@ function CopyButton({ value, label }) {
 
 function DataField({ label, value, copyValue, large = false }) {
   return (
-    <div className="space-y-2 group">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{label}</p>
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-3 group">
+      <p className="text-[10px] font-black text-dim uppercase tracking-[0.2em]">{label}</p>
+      <div className="flex items-center justify-between gap-6">
         <p className={`
-          text-white font-bold leading-none
-          ${large ? "text-4xl" : "text-2xl"}
+          text-main font-black leading-none tracking-tight
+          ${large ? "text-5xl" : "text-2xl"}
         `}>
           {value || "—"}
         </p>
@@ -90,21 +90,32 @@ export default function VerificationPanel({ invoice }) {
     }).format(v ?? 0);
 
   return (
-    <div className="h-full bg-slate-900 p-10 overflow-y-auto space-y-10">
-      <header className="border-b border-slate-800 pb-6">
-        <h2 className="text-sm font-black text-brand-500 uppercase tracking-[0.2em]">Panel de Verificación</h2>
-        <p className="text-slate-400 text-sm mt-1">Valide la información extraída del documento</p>
+    <div className="h-full bg-surface p-12 overflow-y-auto space-y-12 custom-scrollbar">
+      <header className="border-b border-base pb-8">
+        <div className="flex items-center gap-3 mb-2">
+           <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <ShieldCheck size={16} className="text-white" />
+           </div>
+           <h2 className="text-xs font-black text-brand-primary uppercase tracking-[0.3em]">Auditoría de Datos</h2>
+        </div>
+        <p className="text-dim text-sm font-medium">Verifique la integridad de la información procesada</p>
       </header>
 
-      {/* Sección QR - AHORA ARRIBA */}
+      {/* Sección QR */}
       <section>
-        <div className="bg-slate-800/40 rounded-3xl p-8 flex flex-col items-center gap-6 border border-slate-800">
-          <div className="flex items-center gap-3 self-start mb-2">
-            <QrIcon size={20} className="text-brand-500" />
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Código QR AFIP</h3>
+        <div className="bg-surface border border-base rounded-[32px] p-8 flex flex-col items-center gap-8 shadow-xl shadow-black/5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+            <QrIcon size={80} />
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-2xl shadow-black/50">
+          <div className="flex items-center gap-3 self-start mb-2 relative z-10">
+            <div className="p-2 bg-indigo-500/10 rounded-lg">
+              <QrIcon size={18} className="text-brand-primary" />
+            </div>
+            <h3 className="text-[10px] font-black text-main uppercase tracking-[0.2em]">Enlace AFIP</h3>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl shadow-2xl shadow-indigo-500/10 border border-indigo-500/5 relative z-10 transition-transform hover:scale-105 duration-500">
             {invoice.qr_link ? (
               <QRCodeSVG 
                 value={invoice.qr_link} 
@@ -113,62 +124,61 @@ export default function VerificationPanel({ invoice }) {
                 includeMargin={true}
               />
             ) : (
-              <div className="w-[220px] h-[220px] flex items-center justify-center text-slate-300 italic text-sm text-center px-4">
-                No se detectó enlace de QR en esta factura
+              <div className="w-[220px] h-[220px] flex items-center justify-center text-muted italic text-xs text-center px-6 leading-relaxed">
+                El motor de extracción no detectó un código QR válido en este documento.
               </div>
             )}
           </div>
 
-          <div className="w-full flex items-center justify-between bg-slate-900/60 px-5 py-4 rounded-2xl border border-slate-700/50 mt-4">
-            <div className="truncate pr-4">
-              <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Enlace del QR</p>
-              <p className="text-xs text-slate-400 truncate font-mono">{invoice.qr_link || "—"}</p>
+          <div className="w-full flex items-center justify-between bg-surface-hover/50 px-6 py-5 rounded-2xl border border-base relative z-10">
+            <div className="truncate pr-6">
+              <p className="text-[9px] text-dim font-black uppercase tracking-widest mb-1.5 opacity-60">Dirección de Destino</p>
+              <p className="text-[11px] text-indigo-600 dark:text-indigo-400 truncate font-black tracking-tight">{invoice.qr_link || "Sin enlace disponible"}</p>
             </div>
             <CopyButton value={invoice.qr_link} label="Link de QR" />
           </div>
         </div>
       </section>
 
-      <div className="divider-gradient" />
-
       {/* Grid de Datos Reorganizado */}
-      <div className="space-y-10">
+      <div className="space-y-12">
         {/* 1. Razón Social */}
-        <DataField label="Proveedor / Razón Social" value={invoice.razon_social} />
+        <DataField label="Entidad / Proveedor" value={invoice.razon_social} />
         
         {/* 2. CUIT emisor */}
-        <div className="pt-4 border-t border-slate-800/50">
-          <DataField label="CUIT Emisor" value={invoice.cuit} />
+        <div className="pt-8 border-t border-base">
+          <DataField label="Identificación Tributaria (CUIT)" value={invoice.cuit} />
         </div>
 
         {/* 3. Punto de Venta y Número (Mismo renglón) */}
-        <div className="grid grid-cols-2 gap-10 pt-4 border-t border-slate-800/50">
-          <DataField label="Punto de Venta" value={invoice.punto_venta ? String(invoice.punto_venta).padStart(4, "0") : "—"} />
-          <DataField label="Número de Factura" value={invoice.numero ? String(invoice.numero).padStart(8, "0") : "—"} />
+        <div className="grid grid-cols-2 gap-12 pt-8 border-t border-base">
+          <DataField label="Punto Vta" value={invoice.punto_venta ? String(invoice.punto_venta).padStart(4, "0") : "—"} />
+          <DataField label="Número" value={invoice.numero ? String(invoice.numero).padStart(8, "0") : "—"} />
         </div>
 
         {/* 4. Fecha de Emisión */}
-        <div className="pt-4 border-t border-slate-800/50">
-          <DataField label="Fecha de Emisión" value={invoice.fecha} />
+        <div className="pt-8 border-t border-base">
+          <DataField label="Fecha de Registro" value={invoice.fecha} />
         </div>
 
         {/* 5. Importe Total (Conversión Automática si es USD) */}
-        <div className="pt-6 border-t-2 border-brand-500/20">
+        <div className="pt-10 border-t-4 border-brand-primary">
           {invoice.moneda === "USD" ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <DataField 
-                label={`Importe Total (ARS) - T.C. ${invoice.cotizacion}`}
+                label={`Importe Liquidado (ARS) · T.C. ${invoice.cotizacion}`}
                 value={formatARS(invoice.total * invoice.cotizacion)} 
                 copyValue={(invoice.total * invoice.cotizacion).toFixed(2).replace(".", ",")}
                 large 
               />
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider bg-slate-800/50 px-3 py-1.5 rounded-lg inline-block">
-                Original: <span className="text-blue-400">USD {invoice.total?.toFixed(2)}</span>
-              </p>
+              <div className="inline-flex items-center gap-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                Original: USD {invoice.total?.toFixed(2)}
+              </div>
             </div>
           ) : (
             <DataField 
-              label="Importe Total" 
+              label="Importe Total Liquidado" 
               value={formatARS(invoice.total)} 
               copyValue={invoice.total ? invoice.total.toFixed(2).replace(".", ",") : ""}
               large 
@@ -177,9 +187,9 @@ export default function VerificationPanel({ invoice }) {
         </div>
       </div>
       
-      <footer className="pt-10 text-center opacity-30">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            FacturaScan v1.0 · Verificación Manual
+      <footer className="pt-12 text-center opacity-40">
+          <p className="text-[10px] text-dim font-black uppercase tracking-[0.3em]">
+            Central Asset Control · v2.0 · Gold Integrity
           </p>
       </footer>
     </div>

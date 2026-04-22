@@ -32,14 +32,14 @@ export default function StatsCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.08, ease: "easeOut" }}
-      className="glass-card p-5 flex items-center gap-4 hover:border-slate-600/60 transition-colors duration-200 group"
+      className="glass-card p-6 flex items-center gap-5 group"
     >
       {/* Ícono con fondo tintado */}
       <div
         className={`
-          w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0
+          w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm
           ${bgColor}
-          group-hover:scale-110 transition-transform duration-200
+          group-hover:scale-110 group-hover:rotate-3 transition-all duration-300
         `}
       >
         <span className={color}>{icon}</span>
@@ -47,14 +47,14 @@ export default function StatsCard({
 
       {/* Contenido */}
       <div className="min-w-0">
-        <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">
+        <p className="text-[10px] text-muted font-bold uppercase tracking-[0.15em]">
           {label}
         </p>
-        <p className="text-2xl font-bold text-white mt-0.5 leading-none">
+        <p className="text-2xl font-black text-main mt-1 leading-none tracking-tight">
           {value}
         </p>
         {sublabel && (
-          <p className="text-xs text-slate-500 mt-1">{sublabel}</p>
+          <p className="text-xs text-dim mt-1.5 font-medium">{sublabel}</p>
         )}
       </div>
     </motion.div>

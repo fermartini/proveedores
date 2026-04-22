@@ -52,89 +52,110 @@ function UploadTab() {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="space-y-8"
+      className="space-y-12"
     >
       {/* Hero */}
-      <section className="space-y-2">
-        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium uppercase tracking-wider">
-          <span className="w-4 h-px bg-brand-500" />
-          Plataforma ERP · AFIP/ARCA
+      <section className="space-y-6 pt-8 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
+            Sincronización Bancaria Activa
+          </div>
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
         </div>
-        <h2 className="text-3xl font-bold text-white">
-          Bienvenido, <span className="text-brand-400">{nombreEmpresa}</span>.
+        
+        <h2 className="text-5xl md:text-7xl font-black text-main leading-[1.1] tracking-tight">
+          Panel de <span className="brand-gradient-text">Procesamiento</span>.
           <br />
-          Procesamiento de <span className="brand-gradient-text">facturas PDF</span>
+          Audita tus <span className="relative inline-block">
+            activos
+            <span className="absolute bottom-2 left-0 w-full h-3 bg-indigo-500/20 -z-10 rounded-lg" />
+          </span>
         </h2>
-        <p className="text-slate-400 max-w-xl text-sm leading-relaxed">
-          Subí tus facturas electrónicas AFIP/ARCA y extraé automáticamente
-          CUIT, CAE, importes y el link de verificación corregido.
-          Los datos se guardan en Firestore listos para tu ERP.
+        
+        <p className="text-dim max-w-3xl text-lg md:text-xl leading-relaxed font-bold opacity-80">
+          Subí tus comprobantes AFIP y extraé automáticamente datos fiscales con inteligencia artificial. 
+          Un ecosistema diseñado para la velocidad y la precisión administrativa.
         </p>
       </section>
 
       {/* Stats Cards */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Métricas del sistema">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" aria-label="Métricas del sistema">
         <StatsCard
           index={0}
-          icon={<FileText size={20} />}
-          label="Total Facturas"
+          icon={<FileText size={22} />}
+          label="Volumen Sesión"
           value={stats.totalFacturas}
-          sublabel={`${stats.procesadas} procesadas correctamente`}
-          color="text-brand-400"
-          bgColor="bg-brand-500/10"
+          sublabel={`${stats.procesadas} validadas`}
+          color="text-indigo-500"
+          bgColor="bg-indigo-500/10"
         />
         <StatsCard
           index={1}
-          icon={<DollarSign size={20} />}
-          label="Importe Total"
+          icon={<DollarSign size={22} />}
+          label="Liquidez Total"
           value={formatARSShort(stats.totalImporte)}
-          sublabel="Suma de todos los comprobantes"
-          color="text-emerald-400"
+          sublabel="Suma de comprobantes"
+          color="text-emerald-500"
           bgColor="bg-emerald-500/10"
         />
         <StatsCard
           index={2}
-          icon={<Clock size={20} />}
-          label="Pend. de Pago"
+          icon={<Clock size={22} />}
+          label="Operaciones Pendientes"
           value={stats.pendientesPago}
-          sublabel="Facturas sin confirmar pago"
-          color="text-amber-400"
+          sublabel="Pendientes de cierre"
+          color="text-amber-500"
           bgColor="bg-amber-500/10"
         />
         <StatsCard
           index={3}
-          icon={<CheckCircle2 size={20} />}
-          label="Con Errores"
+          icon={<CheckCircle2 size={22} />}
+          label="Alertas Audit."
           value={stats.errores}
-          sublabel={stats.errores > 0 ? "Revisar PDFs con problemas" : "Sin errores"}
-          color={stats.errores > 0 ? "text-red-400" : "text-slate-500"}
-          bgColor={stats.errores > 0 ? "bg-red-500/10" : "bg-slate-700/30"}
+          sublabel={stats.errores > 0 ? "Requiere inspección" : "Firma digital OK"}
+          color={stats.errores > 0 ? "text-red-500" : "text-emerald-500"}
+          bgColor={stats.errores > 0 ? "bg-red-500/10" : "bg-emerald-500/10"}
         />
       </section>
 
-      <div className="divider-gradient" />
+      <div className="divider-gradient !my-12" />
 
       {/* Dropzone */}
-      <section aria-label="Cargar facturas PDF">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-slate-300">Carga de archivos</h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Soporta facturas tipo A, B y C · Extracción automática de QR y texto
-          </p>
+      <section aria-label="Cargar facturas PDF" className="space-y-8">
+        <div className="flex items-center justify-between">
+           <div>
+            <h3 className="text-xl font-black text-main uppercase tracking-tight">Carga de Documentación</h3>
+            <p className="text-sm text-dim font-bold mt-1">
+              Validación OCR en tiempo real via Azure/Gemini
+            </p>
+          </div>
+          <div className="p-3 bg-surface border border-base rounded-2xl hidden md:block">
+             <p className="text-[10px] font-black text-dim uppercase tracking-widest">Capacidad de Lote: 50 PDFs</p>
+          </div>
         </div>
-        <DropZone
-          onUpload={handleUpload}
-          uploading={uploading}
-          uploadProgress={uploadProgress}
-          error={error}
-          onClearError={clearError}
-        />
+        <div className="glass-card p-3 shadow-2xl shadow-indigo-500/5">
+          <DropZone
+            onUpload={handleUpload}
+            uploading={uploading}
+            uploadProgress={uploadProgress}
+            error={error}
+            onClearError={clearError}
+          />
+        </div>
       </section>
 
-      <div className="divider-gradient" />
+      <div className="divider-gradient !my-12" />
 
       {/* Tabla de sesión */}
-      <section aria-label="Facturas procesadas en esta sesión">
+      <section aria-label="Facturas procesadas en esta sesión" className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+             <h3 className="text-xl font-black text-main uppercase tracking-tight">Extracto de Sesión</h3>
+             <span className="px-4 py-1.5 rounded-full bg-indigo-500/10 text-brand-primary text-[10px] font-black uppercase tracking-widest border border-indigo-500/20">
+               {invoices.length} archivos detectados
+             </span>
+          </div>
+        </div>
         <InvoiceTable
           invoices={invoices}
           onConfirm={handleConfirm}
@@ -145,22 +166,41 @@ function UploadTab() {
       </section>
 
       {/* Footer */}
-      <footer className="pb-6 text-center">
-        <p className="text-xs text-slate-700">
-          FacturaScan AFIP/ARCA · Motor de extracción v1.0 ·{" "}
-          <a
-            href={`${BASE_URL}/docs`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slate-600 hover:text-brand-400 transition-colors"
-          >
-            API Docs
-          </a>
-        </p>
+      <footer className="pt-20 pb-12 mt-20 border-t border-base">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="space-y-2">
+            <h4 className="text-lg font-black brand-gradient-text uppercase">FacturaScan Pro</h4>
+            <p className="text-xs text-dim font-bold uppercase tracking-[0.2em] opacity-60">
+               Infraestructura Administrativa Inteligente
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap justify-center gap-10">
+            <div className="space-y-3">
+               <p className="text-[10px] font-black text-main uppercase tracking-widest">Recursos</p>
+               <ul className="space-y-2">
+                  <li>
+                    <a href={`${BASE_URL}/docs`} target="_blank" rel="noopener noreferrer" className="text-xs text-dim hover:text-brand-primary font-bold transition-colors">
+                      Documentación API
+                    </a>
+                  </li>
+                  <li>
+                    <span className="text-xs text-dim font-bold cursor-help">Soporte Técnico</span>
+                  </li>
+               </ul>
+            </div>
+            <div className="space-y-3 text-right">
+               <p className="text-[10px] font-black text-main uppercase tracking-widest">Legal</p>
+               <p className="text-xs text-dim font-bold">© 2026 Cuentas Claras S.A.</p>
+            </div>
+          </div>
+        </div>
       </footer>
     </motion.div>
   );
 }
+
+import LandingPage from "./components/LandingPage";
 
 export default function App() {
   return <AppContent />;
@@ -172,11 +212,6 @@ function AppContent() {
   const { stats } = useInvoices();
   const { cuit } = useAuth();
 
-  // Si no hay CUIT (no está logueado), mostrar Login
-  if (!cuit) {
-    return <LoginView />;
-  }
-
   // Mapeo de rutas a tabs para el Navbar
   const activeTab = location.pathname.includes("dashboard") ? "dashboard" : "upload";
 
@@ -185,46 +220,59 @@ function AppContent() {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           
-          {/* Layout Principal con Navbar */}
-          <Route path="/" element={
+          {/* ---- Rutas Públicas ---- */}
+          {!cuit && (
             <>
-              <Navbar
-                totalFacturas={stats.totalFacturas}
-                activeTab={activeTab}
-                onTabChange={(tab) => navigate(tab === "dashboard" ? "/dashboard" : "/")}
-              />
-              <main className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-8">
-                 <UploadTab />
-              </main>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginView />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </>
-          } />
+          )}
 
-          <Route path="/dashboard" element={
+          {/* ---- Rutas Privadas ---- */}
+          {cuit && (
             <>
-              <Navbar
-                totalFacturas={stats.totalFacturas}
-                activeTab="dashboard"
-                onTabChange={(tab) => navigate(tab === "dashboard" ? "/dashboard" : "/")}
-              />
-              <main className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-8">
-                <motion.div
-                  key="dashboard"
-                  variants={pageVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                >
-                  <DashboardPage />
-                </motion.div>
-              </main>
+              <Route path="/" element={
+                <>
+                  <Navbar
+                    totalFacturas={stats.totalFacturas}
+                    activeTab={activeTab}
+                    onTabChange={(tab) => navigate(tab === "dashboard" ? "/dashboard" : "/")}
+                  />
+                  <main className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-8">
+                     <UploadTab />
+                  </main>
+                </>
+              } />
+
+              <Route path="/dashboard" element={
+                <>
+                  <Navbar
+                    totalFacturas={stats.totalFacturas}
+                    activeTab="dashboard"
+                    onTabChange={(tab) => navigate(tab === "dashboard" ? "/dashboard" : "/")}
+                  />
+                  <main className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-8">
+                    <motion.div
+                      key="dashboard"
+                      variants={pageVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                    >
+                      <DashboardPage />
+                    </motion.div>
+                  </main>
+                </>
+              } />
+
+              <Route path="/factura/:id/verificacion" element={<VerificationPage />} />
+              
+              {/* Fallback para autenticados */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </>
-          } />
+          )}
 
-          {/* Nueva Vista de Verificación */}
-          <Route path="/factura/:id/verificacion" element={<VerificationPage />} />
-
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
     </div>
