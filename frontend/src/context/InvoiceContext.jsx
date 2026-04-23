@@ -10,7 +10,8 @@ import {
   uploadInvoices as apiUploadInvoices, 
   confirmInvoices as apiConfirmInvoices,
   getInvoices as apiGetDashboardInvoices,
-  updateInvoice as apiUpdateDashboardInvoice
+  updateInvoice as apiUpdateDashboardInvoice,
+  deleteInvoice as apiDeleteDashboardInvoice
 } from "../services/api";
 import { useAuth } from "./AuthContext";
 
@@ -157,21 +158,42 @@ export const InvoiceProvider = ({ children }) => {
     const newValue = !currentValue;
     setDashboardInvoices(prev => prev.map(inv => inv.id === docId ? { ...inv, [field]: newValue } : inv));
     try {
-      await apiUpdateDashboardInvoice(docId, field, newValue);
+      await apiUpdateDashboardInvoice(docId, { [field]: newValue });
     } catch (err) {
       setDashboardInvoices(prev => prev.map(inv => inv.id === docId ? { ...inv, [field]: currentValue } : inv));
       console.error(err);
     }
   }, []);
 
-  const updateDashboardComment = useCallback(async (docId, text) => {
-    setDashboardInvoices(prev => prev.map(inv => inv.id === docId ? { ...inv, comentario: text } : inv));
+  const updateDashboardInvoice = useCallback(async (docId, data) => {
+    const original = dashboardInvoices.find(inv => inv.id === docId);
+    setDashboardInvoices(prev => prev.map(inv => inv.id === docId ? { ...inv, ...data } : inv));
     try {
-      await apiUpdateDashboardInvoice(docId, "comentario", text);
+      await apiUpdateDashboardInvoice(docId, data);
     } catch (err) {
+      if (original) {
+        setDashboardInvoices(prev => prev.map(inv => inv.id === docId ? original : inv));
+      }
       console.error(err);
+      throw err;
     }
-  }, []);
+  }, [dashboardInvoices]);
+
+  const updateDashboardComment = useCallback(async (docId, text) => {
+    await updateDashboardInvoice(docId, { comentario: text });
+  }, [updateDashboardInvoice]);
+
+  const deleteDashboardInvoice = useCallback(async (docId) => {
+    const original = [...dashboardInvoices];
+    setDashboardInvoices(prev => prev.filter(inv => inv.id !== docId));
+    try {
+      await apiDeleteDashboardInvoice(docId);
+    } catch (err) {
+      setDashboardInvoices(original);
+      console.error(err);
+      alert("Error al eliminar la factura.");
+    }
+  }, [dashboardInvoices]);
 
   const stats = {
     totalFacturas: invoices.length,
@@ -193,6 +215,7 @@ export const InvoiceProvider = ({ children }) => {
       fileMap,
       handleUpload, handleConfirm, removeInvoice, updateInvoice,
       fetchDashboardInvoices, toggleDashboardField, updateDashboardComment,
+      updateDashboardInvoice, deleteDashboardInvoice,
       clearError: () => setError(null)
     }}>
       {children}

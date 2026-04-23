@@ -10,8 +10,9 @@ import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
-  FileX, ChevronLeft, ChevronRight, Archive, CheckCircle2
+  FileX, ChevronLeft, ChevronRight, Archive, CheckCircle2, Download
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import InvoiceRow from "./InvoiceRow";
 import { useInvoiceContext } from "../context/InvoiceContext";
 
@@ -170,6 +171,30 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
     }
   };
 
+  const handleExportExcel = () => {
+    if (invoices.length === 0) return;
+    const data = sorted.map(i => ({
+      "Proveedor": i.razon_social,
+      "CUIT": i.cuit,
+      "Tipo": i.tipo_factura,
+      "Punto Venta": i.punto_venta,
+      "Número": i.numero,
+      "Fecha": i.fecha,
+      "Importe Neto": i.importe_neto,
+      "IVA": i.iva,
+      "Otros/Ret": i.otros_tributos,
+      "Total": i.total,
+      "Moneda": i.moneda || "ARS",
+      "Cuenta": i.cuenta_contable || "SIN CTA",
+      "Archivo": i.filename
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Facturas");
+    XLSX.writeFile(wb, `Exportacion_Session_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   const handleConfirmClick = () => {
     const errorCount = invoices.filter(i => i.status !== "recibida").length;
     if (errorCount > 0) {
@@ -294,6 +319,14 @@ export default function InvoiceTable({ invoices, onConfirm, isConfirming, onRemo
           >
             <Archive size={18} className={isZipping ? "animate-pulse" : ""} />
             {isZipping ? "Empaquetando..." : "Descargar Lote ZIP"}
+          </button>
+          <button
+            onClick={handleExportExcel}
+            disabled={invoices.length === 0}
+            className="btn-success"
+          >
+            <Download size={18} />
+            Exportar Excel
           </button>
         </div>
 

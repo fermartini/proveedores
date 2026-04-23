@@ -19,6 +19,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "./StatusBadge";
 import { useInvoiceContext } from "../context/InvoiceContext";
+import EditInvoiceModal from "./EditInvoiceModal";
+import { Pencil } from "lucide-react";
 
 // Valores sentinel del QR que vienen del backend
 const QR_NO_TIENE          = "NO TIENE";
@@ -160,6 +162,7 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
   const navigate = useNavigate();
   const { dashboardInvoices } = useInvoiceContext();
   const [localInvoice, setLocalInvoice] = useState(invoice);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // --- Lógica de Memoria de Cuentas (Sugerencia) ---
   useEffect(() => {
@@ -225,6 +228,11 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
     const newPagada = !localInvoice.pagada;
     setLocalInvoice((prev) => ({ ...prev, pagada: newPagada }));
     onUpdate({ pagada: newPagada });
+  };
+
+  const handleEditSave = (newData) => {
+    setLocalInvoice(prev => ({ ...prev, ...newData }));
+    onUpdate(newData);
   };
 
   // Descripción para copiar (campo compuesto para ERP)
@@ -479,15 +487,31 @@ export default function InvoiceRow({ invoice, index, onRemove, onUpdate }) {
       )}
 
 
-      {/* Botón Eliminar */}
+      {/* Botones Acciones */}
       <td className="px-2 py-4 text-center">
-        <button
-          onClick={onRemove}
-          className="w-8 h-8 flex items-center justify-center text-dim hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-200"
-          title="Eliminar"
-        >
-          <Trash2 size={16} />
-        </button>
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="w-8 h-8 flex items-center justify-center text-dim hover:text-brand-primary hover:bg-brand-primary/10 rounded-lg transition-all duration-200"
+            title="Editar datos"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={onRemove}
+            className="w-8 h-8 flex items-center justify-center text-dim hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-200"
+            title="Eliminar"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+
+        <EditInvoiceModal 
+          isOpen={isEditModalOpen}
+          invoice={localInvoice}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleEditSave}
+        />
       </td>
     </motion.tr>
   );

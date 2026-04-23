@@ -183,14 +183,13 @@ def get_all_invoices(company_cuit: str = None) -> list:
 
 
 
-def update_invoice_field(doc_id: str, field: str, value) -> bool:
+def update_invoice(doc_id: str, data: dict) -> bool:
     """
-    Actualiza un campo específico de una factura (e.g., autorizada, pagada).
+    Actualiza múltiples campos de una factura.
 
     Args:
         doc_id: ID del documento en Firestore.
-        field: Nombre del campo a actualizar.
-        value: Nuevo valor del campo.
+        data: Diccionario con los campos y valores a actualizar.
 
     Returns:
         True si se actualizó correctamente, False si hubo un error.
@@ -200,11 +199,28 @@ def update_invoice_field(doc_id: str, field: str, value) -> bool:
         return False
 
     try:
-        db.collection(COLLECTION_NAME).document(doc_id).update({field: value})
-        logger.info(f"[Firebase] Actualizado {doc_id}.{field} = {value}")
+        db.collection(COLLECTION_NAME).document(doc_id).update(data)
+        logger.info(f"[Firebase] Factura {doc_id} actualizada: {list(data.keys())}")
         return True
     except Exception as exc:
         logger.error(f"[Firebase] Error al actualizar factura {doc_id}: {exc}")
+        return False
+
+
+def delete_invoice(doc_id: str) -> bool:
+    """
+    Elimina permanentemente una factura de Firestore.
+    """
+    db = _init_firebase()
+    if db is None:
+        return False
+
+    try:
+        db.collection(COLLECTION_NAME).document(doc_id).delete()
+        logger.info(f"[Firebase] Factura eliminada: {doc_id}")
+        return True
+    except Exception as exc:
+        logger.error(f"[Firebase] Error al eliminar factura {doc_id}: {exc}")
         return False
 
 

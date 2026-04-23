@@ -88,13 +88,23 @@ export const confirmInvoices = async (payloads) => {
 // updateInvoice — PATCH /api/invoices/:id
 // ---------------------------------------------------------------------------
 /**
- * Actualiza un campo de una factura vía el backend.
+ * Actualiza uno o varios campos de una factura vía el backend.
  *
  * @param {string} docId - ID del documento.
- * @param {string} field - Campo a actualizar (autorizada | pagada | cuenta_contable).
- * @param {any} value - Nuevo valor.
+ * @param {object} data - Objeto con los campos a actualizar (e.g. { autorizada: true, razon_social: "Nuevo Nombre" }).
  */
-export const updateInvoice = async (docId, field, value) => {
-  const response = await apiClient.patch(`/api/invoices/${docId}`, { field, value });
+export const updateInvoice = async (docId, data) => {
+  const response = await apiClient.patch(`/api/invoices/${docId}`, data);
+  return response.data;
+};
+
+// ---------------------------------------------------------------------------
+// deleteInvoice — DELETE /api/invoices/:id
+// ---------------------------------------------------------------------------
+/**
+ * Elimina una factura de la base de datos.
+ */
+export const deleteInvoice = async (docId) => {
+  const response = await apiClient.delete(`/api/invoices/${docId}`);
   return response.data;
 };

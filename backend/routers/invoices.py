@@ -210,30 +210,36 @@ async def confirm_invoices(payloads: List[InvoiceDBPayload]):
 
 @router.patch(
     "/invoices/{doc_id}",
-    summary="Actualizar campo de una factura",
-    description="Actualiza un campo específico (e.g., autorizada, pagada) de una factura.",
+    summary="Actualizar factura",
+    description="Actualiza uno o varios campos de una factura.",
 )
 async def update_invoice(doc_id: str, payload: dict):
     """
-    Permite actualizar campos como 'autorizada' y 'pagada' desde el frontend.
-
-    Body JSON esperado: {"field": "autorizada", "value": true}
+    Permite actualizar campos como 'autorizada', 'pagada', 'razon_social', etc.
     """
-    field = payload.get("field")
-    value = payload.get("value")
+    if not payload:
+        raise HTTPException(status_code=400, detail="El body no puede estar vacío.")
 
-    if not field:
-        raise HTTPException(status_code=400, detail="El campo 'field' es requerido.")
+    # Si viene con el formato anterior {"field": "x", "value": "y"}
+    if "field" in payload and "value" in payload:
+        data = {payload["field"]: payload["value"]}
+    else:
+        data = payload
 
-    allowed_fields = {"autorizada", "pagada", "cuenta_contable", "comentario"}
-    if field not in allowed_fields:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Campo '{field}' no permitido. Campos editables: {allowed_fields}"
-        )
-
-    success = firebase_client.update_invoice_field(doc_id, field, value)
+    success = firebase_client.update_invoice(doc_id, data)
     if not success:
         raise HTTPException(status_code=500, detail="Error al actualizar el documento.")
 
-    return {"success": True, "doc_id": doc_id, "field": field, "value": value}
+    return {"success": True, "doc_id": doc_id, "updated_fields": list(data.keys())}
+
+
+@router.delete(
+    "/invoices/{doc_id}",
+    summary="Eliminar factura",
+    description="Elimina permanentemente una factura de la base de datos.",
+)
+async def delete_invoice(doc_id: str):
+    success = firebase_client.delete_invoice(doc_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Error al eliminar el documento.")
+    return {"success": True, "doc_id": doc_id}

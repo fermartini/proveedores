@@ -30,5 +30,7 @@ export const useDashboard = () => {
     fetchInvoices: fetchDashboardInvoices,
     toggleField: toggleDashboardField,
     updateComment: updateDashboardComment,
+    updateInvoice: updateDashboardInvoice,
+    deleteInvoice: deleteDashboardInvoice,
   };
 };

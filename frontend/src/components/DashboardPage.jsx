@@ -6,11 +6,12 @@ import {
   Clock, TrendingUp, ChevronUp, ChevronDown,
   ChevronsUpDown, FileX, Filter, Building2,
   Copy, Check, MessageSquare, QrCode, Download,
-  ChevronLeft, ChevronRight, Calendar
+  ChevronLeft, ChevronRight, Calendar, Pencil, Trash2
 } from "lucide-react";
 
 import { useDashboard } from "../hooks/useDashboard";
 import CommentModal from "./CommentModal";
+import EditInvoiceModal from "./EditInvoiceModal";
 
 const PAGE_SIZE = 20;
 
@@ -108,7 +109,7 @@ function ToggleBtn({ value, onLabel, offLabel, onClick, disabled, onColor, offCo
 // ---------------------------------------------------------------------------
 // Fila de factura del dashboard
 // ---------------------------------------------------------------------------
-function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
+function DashboardRow({ invoice, onToggle, isUpdating, onComment, onEdit, onDelete }) {
   const isDisabled = isUpdating;
   
   const isInvalidReceptor = invoice.status === "receptor_invalido";
@@ -275,6 +276,29 @@ function DashboardRow({ invoice, onToggle, isUpdating, onComment }) {
           )}
         </div>
       </td>
+      {/* Acciones */}
+      <td className="px-6 py-4 text-center">
+        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => onEdit(invoice)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-dim hover:text-brand-primary hover:bg-brand-primary/10 transition-all shadow-sm border border-transparent hover:border-brand-primary/20"
+            title="Editar Factura"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm("¿Estás seguro de eliminar esta factura permanentemente?")) {
+                onDelete(invoice.id);
+              }
+            }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-dim hover:text-red-500 hover:bg-red-500/10 transition-all shadow-sm border border-transparent hover:border-red-500/20"
+            title="Eliminar Factura"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </td>
     </motion.tr>
   );
 }
@@ -300,8 +324,9 @@ const COLS = [
   { key: "created_at",         label: "Recibido",        sortable: true,  align: "center" },
   { key: "comentario",         label: "Obs.",            sortable: false, align: "center" },
   { key: "autorizada",         label: "Aut.",            sortable: true,  align: "center" },
-  { key: "pagada",             label: "Pag.",            sortable: true,  align: "center" },
-  { key: "qr",                 label: "QR",              sortable: false, align: "center" },
+  {key: "pagada",             label: "Pag.",            sortable: true,  align: "center" },
+  {key: "qr",                 label: "QR",              sortable: false, align: "center" },
+  {key: "acciones",           label: "Acciones",        sortable: false, align: "center" },
 ];
 
 const FILTERS = [
@@ -312,9 +337,8 @@ const FILTERS = [
 ];
 
 export default function DashboardPage() {
-  const { 
     invoices, loading, error, updatingId, stats, 
-    fetchInvoices, toggleField, updateComment 
+    fetchInvoices, toggleField, updateComment, updateInvoice, deleteInvoice
   } = useDashboard();
 
   const [search, setSearch]       = useState("");
@@ -330,6 +354,9 @@ export default function DashboardPage() {
 
   // Modal de Comentarios
   const [commentModal, setCommentModal] = useState({ isOpen: false, invoice: null });
+  
+  // Modal de Edición
+  const [editModal, setEditModal] = useState({ isOpen: false, invoice: null });
 
   // 1. Filtrado + búsqueda + Mes
   const filtered = useMemo(() => {
@@ -431,6 +458,19 @@ export default function DashboardPage() {
 
   const handleOpenComment = (invoice) => {
     setCommentModal({ isOpen: true, invoice });
+  };
+
+  const handleOpenEdit = (invoice) => {
+    setEditModal({ isOpen: true, invoice });
+  };
+
+  const handleSaveEdit = async (newData) => {
+    if (!editModal.invoice) return;
+    try {
+      await updateInvoice(editModal.invoice.id, newData);
+    } catch (err) {
+      alert("Error al actualizar la factura.");
+    }
   };
 
   const monthLabel = displayDate.toLocaleDateString("es-AR", { month: 'long', year: 'numeric' });
@@ -650,6 +690,8 @@ export default function DashboardPage() {
                         invoice={invoice}
                         onToggle={toggleField}
                         onComment={handleOpenComment}
+                        onEdit={handleOpenEdit}
+                        onDelete={deleteInvoice}
                         isUpdating={updatingId === invoice.id}
                       />
                     ))
@@ -729,6 +771,13 @@ export default function DashboardPage() {
         invoiceInfo={commentModal.invoice ? `${commentModal.invoice.razon_social} - Factura ${commentModal.invoice.numero_comprobante}` : ""}
         onClose={() => setCommentModal({ isOpen: false, invoice: null })}
         onSave={(text) => updateComment(commentModal.invoice.id, text)}
+      />
+
+      <EditInvoiceModal
+        isOpen={editModal.isOpen}
+        invoice={editModal.invoice}
+        onClose={() => setEditModal({ isOpen: false, invoice: null })}
+        onSave={handleSaveEdit}
       />
     </div>
   );
