@@ -337,6 +337,7 @@ const FILTERS = [
 ];
 
 export default function DashboardPage() {
+  const { 
     invoices, loading, error, updatingId, stats, 
     fetchInvoices, toggleField, updateComment, updateInvoice, deleteInvoice
   } = useDashboard();

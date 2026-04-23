@@ -4,7 +4,8 @@ import { useInvoiceContext } from "../context/InvoiceContext";
 export const useDashboard = () => {
   const { 
     dashboardInvoices, dbLoading, error, 
-    fetchDashboardInvoices, toggleDashboardField, updateDashboardComment 
+    fetchDashboardInvoices, toggleDashboardField, updateDashboardComment,
+    updateDashboardInvoice, deleteDashboardInvoice
   } = useInvoiceContext();
 
   // Mapeamos los nombres para mantener compatibilidad con el componente DashboardPage
