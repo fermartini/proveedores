@@ -17,7 +17,7 @@ export const BASE_URL = import.meta.env.VITE_API_URL || "https://khalldragon-api
 // Instancia de axios con config base
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 120_000, // 2 minutos para PDFs pesados
+  timeout: 300_000, // 5 minutos para procesamiento masivo de PDFs
 });
 
 // ---------------------------------------------------------------------------
