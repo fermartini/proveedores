@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Función para obtener los datos del perfil del usuario (contiene el company_cuit)
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // -------------------------------------------------------------------------
+    // Colección: users
+    // Almacena el perfil de cada usuario (CUIT de empresa, nombre, email)
+    // -------------------------------------------------------------------------
+    match /users/{userId} {
+      // Un usuario solo puede leer y modificar su propio perfil
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // -------------------------------------------------------------------------
+    // Colección: invoices
+    // Almacena las facturas procesadas.
+    // -------------------------------------------------------------------------
+    match /invoices/{invoiceId} {
+      
+      // Lectura: El usuario solo puede acceder a facturas que coincidan con el CUIT de su empresa.
+      // Nota: Para que las consultas funcionen desde el cliente, deben incluir el filtro por company_cuit.
+      allow read: if isAuthenticated() && (
+        resource.data.company_cuit == getUserData().company_cuit
+      );
+      
+      // Creación: Solo si el CUIT de la nueva factura coincide con el perfil del usuario.
+      allow create: if isAuthenticated() && (
+        request.resource.data.company_cuit == getUserData().company_cuit
+      );
+
+      // Actualización: Solo si la factura pertenece a la empresa del usuario.
+      allow update: if isAuthenticated() && (
+        resource.data.company_cuit == getUserData().company_cuit
+      );
+      
+      // Eliminación: Solo si la factura pertenece a la empresa del usuario.
+      allow delete: if isAuthenticated() && (
+        resource.data.company_cuit == getUserData().company_cuit
+      );
+    }
+    
+    // -------------------------------------------------------------------------
+    // Fallback de Seguridad
+    // Denegar cualquier otro acceso por defecto a cualquier colección no definida.
+    // -------------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
